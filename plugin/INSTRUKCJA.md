@@ -134,4 +134,4 @@ Nowy panel Next.js jest osadzony w WordPressie i korzysta z REST API bez przeła
 
 Filtr meczu działa dla pulpitu, raportów, zamówień, biletów, planu hali i historii wejść. Katalog meczów, ofert, kibiców i ustawienia są wspólne. Raporty przychodów dotyczą opłaconych pozycji, nie salda rozliczeń Stripe.
 
-Konfigurację wydawania paczek i przycisku aktualizacji opisuje [REPOZYTORIUM.md](REPOZYTORIUM.md). Po połączeniu PR-a do main i udanych testach GitHub Actions automatycznie publikuje kolejną wersję.
+Konfigurację wydawania paczek i przycisku aktualizacji opisuje [REPOZYTORIUM.md](REPOZYTORIUM.md). Zmiany nie zostały opublikowane z tego środowiska.

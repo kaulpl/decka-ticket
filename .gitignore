@@ -1,0 +1,14 @@
+node_modules/
+.next/
+frontend/out/
+plugin/assets/
+dist/
+*.tsbuildinfo
+.DS_Store
+.env*
+!.env.example
+tests/*-voucher.pdf
+tests/*-voucher.png
+tests/expected-qr.txt
+tests/wordpress-errors.json
+tests/artifacts/
