@@ -1,10 +1,10 @@
-# Decka Bilety 0.3.0
+# Decka Bilety 0.3.1
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
-1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.0.zip`. Aktywuj wtyczkę.
+1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.1.zip`. Aktywuj wtyczkę.
 2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
 3. Utwórz stronę **Bilety** z blokiem Krótki kod: `[decka_bilety]`.
 4. Skaner działa pod adresem **/bileter** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
@@ -155,3 +155,12 @@ Każdy mecz może mieć grafikę JPG/PNG (do 8 MB i 6000 px), pokazywaną na kaf
 Przyciski portfeli są dostępne przy opłaconych biletach na koncie kibica po konfiguracji. Portfele zawierają ten sam QR co PDF. Nie wdrożono push aktualizacji portfeli: przy zmianie terminu należy sprawdzić konto kibica, a klub powiadamia kibiców. Skaner zawsze sprawdza bieżący status w bazie, również po zwrocie lub odwołaniu meczu. Produkcyjne akceptowanie passów wymaga prób z prawdziwymi certyfikatami/kontami klubu.
 
 **iOS:** poprawiono wysokość osadzenia (pełny koszyk), ścieżki czcionek i dodano pełnoekranowy link awaryjny. Widok działa w lokalnym mobilnym WebKit. Całkowicie pustego widoku na publicznej stronie nie udało się odtworzyć; wymagany odbiór na zgłoszonym fizycznym iPhonie. Test WebKit nie zastępuje testu aparatu i uprawnień na urządzeniu.
+
+
+## Błąd zapisu przy przejściu do płatności (0.3.1)
+
+Wydanie ponawia aktualizację struktury bazy i sprawdza obecność wymaganych kolumn przed oznaczeniem jej jako ukończonej. Nie usuwa zamówień ani biletów. W Ustawieniach dodano sekcję **Baza danych** i przycisk **Sprawdź i uzupełnij strukturę bazy**.
+
+Jeśli zapis zamówienia zostanie odrzucony, klient otrzyma kod `DB-ORDERS-…`, `DB-INVENTORY-…` albo `DB-ITEMS-…`. Odpowiadający mu ostatni błąd (czas, etap, kategoria i nazwa pola, jeśli rozpoznana) znajduje się w sekcji Baza danych. Diagnoza jest zapisywana po wycofaniu transakcji, dzięki czemu nie znika razem z nieudanym zamówieniem. Nie zapisujemy w niej zapytania SQL, danych kibica ani sekretów Stripe. Nieudany zapis nie jest automatycznie ponawiany i nie rozpoczyna płatności.
+
+Brak kolumn można naprawić ponowną aktualizacją struktury. Brak uprawnień, dodatkowe wymagane kolumny, błędy kodowania lub ograniczenia hostingu wymagają działania na podstawie wskazanej kategorii. Nie należy zakładać, że sam komunikat zapisu oznacza błędne klucze Stripe. Zgłoszonego błędu konkretnego hostingu nie odtworzono na czystym MySQL; to wydanie dostarcza naprawę niepełnej migracji oraz diagnostykę potrzebną do dalszego ustalenia przyczyny.

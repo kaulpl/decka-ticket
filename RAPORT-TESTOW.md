@@ -104,3 +104,8 @@ Nie wykonano instalacji aktualizacji z publicznego GitHub Release — wydanie ni
 Publiczna strona przekierowuje /kup-bilet na /kup-bilety/. W odczycie WebKit nie wystąpił całkowicie pusty ekran. Potwierdzono ucinanie koszyka przez wysokość iframe i błędne względne adresy czcionek; poprawiono je. Odbiór na fizycznym iPhonie i test aparatu pozostają konieczne.
 
 Testy lokalne używają SQLite i atrap Stripe, więc nie potwierdzają współbieżności InnoDB, rzeczywistych płatności, doręczenia poczty ani akceptacji portfeli przez konta Apple/Google klubu. Konfiguracja i testy produkcyjne tych usług wymagają właściwych kluczy/certyfikatów. Test Apple w CI sprawdza archiwum, manifest i podpis na certyfikacie jednorazowym; nie jest certyfikatem klubu.
+
+
+## Diagnostyka zapisu 0.3.1 — 01.10.2026
+
+Test oryginalnego zapisu na WordPressie i MySQL 8 z STRICT_TRANS_TABLES przeszedł także po aktualizacji starszego schematu. Nie odtworzono błędu z hostingu klubu. Dodano regresję błędnego INSERT z dodatkową wymaganą kolumną, sprawdzenie zachowania diagnostyki po rollback, brak częściowego zamówienia oraz wykrywanie pozornie zakończonej migracji bez wymaganych kolumn. Dalsza diagnoza konkretnego hostingu wymaga nowego kodu błędu po aktualizacji. CI blokuje wydanie przy niepowodzeniu testu MySQL.

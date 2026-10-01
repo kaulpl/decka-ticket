@@ -34,7 +34,7 @@ jobs:
       - run: pnpm --dir frontend run build
       - run: php -l plugin/decka-bilety.php
       - run: find plugin/includes -name '*.php' -print0 | xargs -0 -n1 php -l
-      - run: php tests/domain.php && php tests/integration.php && php tests/updater.php && php tests/identity-wallet.php
+      - run: php tests/domain.php && php tests/integration.php && php tests/updater.php && php tests/identity-wallet.php && php tests/db-diagnostics.php
       - run: node scripts/licenses.mjs
       - run: python3 scripts/package.py
       - uses: actions/upload-artifact@v4

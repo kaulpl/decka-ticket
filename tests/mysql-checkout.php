@@ -18,3 +18,16 @@ Decka_DB::install();
 $wpdb->flush();$wpdb->col_meta=[];
 $again=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'seats'=>[['id'=>'67','kind'=>'normal']]]);
 decka_check($again['status']==='pending','paid checkout after schema upgrade');decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('orders'))===2,'migration preserves orders');
+
+// Capture an actual failed INSERT, then prove rollback did not erase the diagnosis.
+$wpdb->query('ALTER TABLE '.Decka_DB::table('orders').' ADD COLUMN legacy_required int NOT NULL');
+$before=(int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('orders'));$old=$wpdb->suppress_errors(true);$caught=null;
+try{Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'seats'=>[['id'=>'68','kind'=>'normal']]]);}catch(Decka_DB_Error $e){$caught=$e;}
+$wpdb->suppress_errors($old);decka_check($caught instanceof Decka_DB_Error,'failed checkout has safe reference');
+$diagnostic=get_option('decka_db_diagnostic');decka_check($diagnostic['reason']==='required_field'&&$diagnostic['field']==='legacy_required','actual MySQL failure classified');decka_check($diagnostic['reference']===$caught->diagnostic['reference'],'diagnostic survives rollback');decka_check(!str_contains(wp_json_encode($diagnostic),'ci@example.test'),'diagnostic contains no buyer email');decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('orders'))===$before,'failed checkout leaves no order');
+$wpdb->query('ALTER TABLE '.Decka_DB::table('orders').' DROP COLUMN legacy_required');
+// A failed/no-op dbDelta must not falsely mark an incomplete schema current.
+$wpdb->query('ALTER TABLE '.Decka_DB::table('orders').' DROP COLUMN package_ack');update_option('decka_schema_version','0.2.0');
+$disable=fn($queries)=>[];add_filter('dbdelta_queries',$disable);$failed=false;try{Decka_DB::install();}catch(RuntimeException $e){$failed=true;}remove_filter('dbdelta_queries',$disable);
+decka_check($failed&&get_option('decka_schema_version')==='0.2.0','incomplete migration is not marked successful');
+Decka_DB::install();decka_check(get_option('decka_schema_version')===Decka_DB::SCHEMA_VERSION,'repair verifies schema');
