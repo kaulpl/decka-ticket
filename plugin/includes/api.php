@@ -1,7 +1,7 @@
 <?php
 final class Decka_API {
     private static function route(string $path,string $method,callable $fn,callable $permission):void {
-        register_rest_route('decka/v1',$path,['methods'=>$method,'permission_callback'=>$permission,'callback'=>function($r)use($fn){try{return new WP_REST_Response($fn($r),200,['Cache-Control'=>'no-store, private']);}catch(Throwable $e){return new WP_Error('decka_error',$e->getMessage(),['status'=>400]);}}]);
+        register_rest_route('decka/v1',$path,['methods'=>$method,'permission_callback'=>$permission,'callback'=>function($r)use($fn,$path){try{if(!in_array($path??'',['/login','/register','/logout'],true))Decka_DB::require_storage();return new WP_REST_Response($fn($r),200,['Cache-Control'=>'no-store, private']);}catch(Throwable $e){return new WP_Error('decka_error',$e->getMessage(),['status'=>400]);}}]);
     }
     public static function register():void {
         $public=fn()=>true;$user=fn()=>is_user_logged_in();$gate=fn()=>current_user_can('decka_scan');$admin=fn()=>current_user_can('decka_manage');
