@@ -4,6 +4,9 @@ final class Decka_Stripe {
         $constant='DECKA_STRIPE_'.strtoupper($mode).'_'.strtoupper($kind);
         if(defined($constant))return constant($constant);
         $v=Decka_DB::settings()[$mode.'_'.$kind]??'';
+        return self::decrypt($v);
+    }
+    public static function decrypt(string $v):string {
         if(!$v)return '';
         $bin=base64_decode($v,true);if($bin===false || strlen($bin)<29)return '';
         return openssl_decrypt(substr($bin,28),'aes-256-gcm',hash('sha256',wp_salt('auth'),true),OPENSSL_RAW_DATA,substr($bin,0,12),substr($bin,12,16))?:'';

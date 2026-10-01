@@ -11,6 +11,8 @@ if assets.exists():
         if p.is_file():p.chmod(0o644)
     shutil.rmtree(assets)
 shutil.copytree(root/'frontend/out',assets)
+for css in (assets/'_next').rglob('*.css'):
+    css.write_text(css.read_text().replace('./_next/static/media/','../media/'))
 assert (assets/'admin/index.html').exists(), 'Build the Next.js admin first'
 licenses=root/'plugin/licenses';licenses.mkdir(exist_ok=True)
 for p in (root/'frontend/app/fonts').glob('*OFL.txt'):shutil.copy2(p,licenses/p.name)
@@ -25,7 +27,7 @@ source=out/f'decka-bilety-zrodla-{version}.zip'
 with zipfile.ZipFile(source,'w',zipfile.ZIP_DEFLATED) as z:
     for p in sorted(root.rglob('*')):
         rel=p.relative_to(root)
-        if any(x in {'.git','node_modules','.next','out','assets','dist','__pycache__'} for x in rel.parts):continue
+        if any(x in {'.git','node_modules','.next','out','assets','dist','__pycache__','tmp','output','artifacts'} for x in rel.parts):continue
         if not p.is_file() or p.is_relative_to(out):continue
         if p.suffix in {'.pdf','.tsbuildinfo'} or p.name.startswith(('wordpress-','expected-qr')):continue
         if p.suffix=='.png' and rel.as_posix()!='frontend/public/logo.png':continue

@@ -17,6 +17,9 @@ final class Decka_Domain {
         foreach($parts['v1']??[] as $sig) if(hash_equals($expected,$sig)) return true;
         return false;
     }
+    public static function package_token(object $ticket,string $secret):string {
+        return 'DK2.'.$ticket->id.'.'.hash_hmac('sha256','package.'.$ticket->order_id.'.'.$ticket->seat_id.'.'.$ticket->nonce,$secret);
+    }
     public static function token(object $ticket,string $secret): string {
         $data=$ticket->id.'.'.$ticket->event_id.'.'.$ticket->nonce;
         return 'DK1.'.$ticket->id.'.'.hash_hmac('sha256',$data,$secret);

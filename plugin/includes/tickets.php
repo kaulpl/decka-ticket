@@ -1,20 +1,35 @@
 <?php
 final class Decka_Tickets {
+    public static function documents(int $order_id):array {
+        global $wpdb;$o=Decka_Service::order($order_id);if(!$o||!in_array($o->status,['paid','free','voucher'],true))throw new RuntimeException('Bilety nie są dostępne.');
+        $rows=$wpdb->get_results($wpdb->prepare('SELECT t.*,e.opponent,e.starts_at,e.venue,e.image_id,i.amount FROM '.Decka_DB::table('tickets').' t JOIN '.Decka_DB::table('events').' e ON e.id=t.event_id JOIN '.Decka_DB::table('items').' i ON i.order_id=t.order_id AND i.event_id=t.event_id AND i.seat_id=t.seat_id WHERE t.order_id=%d ORDER BY t.id',$order_id));$groups=[];
+        foreach($rows as $t){$key=$o->offer_id?'seat-'.$t->seat_id:'ticket-'.$t->id;$groups[$key][]=$t;}
+        $documents=[];foreach($groups as $group){$t=$group[0];$documents[]=['ticket'=>$t,'events'=>$group,'package'=>(bool)$o->offer_id,'token'=>$o->offer_id?Decka_Domain::package_token($t,wp_salt('secure_auth')):Decka_Domain::token($t,wp_salt('secure_auth')),'amount'=>array_sum(array_map(fn($row)=>(int)$row->amount,$group))];}return $documents;
+    }
     public static function pdf(int $order_id):string {
-        global $wpdb;require_once DECKA_DIR.'vendor/tcpdf/tcpdf.php';$o=Decka_Service::order($order_id);
-        if(!$o || !in_array($o->status,['paid','free','voucher'],true))throw new RuntimeException('Bilety nie są dostępne.');
-        $rows=$wpdb->get_results($wpdb->prepare('SELECT t.*, e.opponent,e.starts_at,e.venue FROM '.Decka_DB::table('tickets').' t JOIN '.Decka_DB::table('events').' e ON e.id=t.event_id WHERE t.order_id=%d ORDER BY t.event_id,t.id',$order_id));
-        $pdf=new TCPDF('P','mm','A4',true,'UTF-8',false);$pdf->setPrintHeader(false);$pdf->setPrintFooter(false);$pdf->SetMargins(20,20,20);$pdf->SetAutoPageBreak(false);$pdf->SetCreator('Decka Bilety');$pdf->SetTitle('Bilety Decka Pelplin');
-        $seats=array_column(Decka_DB::seats()['seats'],null,'id');
-        foreach($rows as $t){$seat=$seats[$t->seat_id];$pdf->AddPage();$color=sscanf(Decka_DB::settings()['ticket_color']??'#0c253a','#%02x%02x%02x');$pdf->SetFillColor(...$color);$pdf->Rect(0,0,210,54,'F');$pdf->SetTextColor(255,255,255);$pdf->SetFont('dejavusans','B',24);$pdf->SetXY(20,18);$pdf->Cell(170,12,'DECKA PELPLIN');$pdf->SetFont('dejavusans','',11);$pdf->SetXY(20,33);$pdf->Cell(170,8,$t->status==='revoked'?'BILET UNIEWAŻNIONY':($o->mode==='test'?'BILET TESTOWY — NIEWAŻNY NA PRAWDZIWY MECZ':'BILET WSTĘPU'));
-            $pdf->SetTextColor(10,31,53);$pdf->SetXY(20,67);$pdf->SetFont('dejavusans','B',20);$pdf->MultiCell(170,32,'Decka Pelplin' . "\n" . '— '.$t->opponent,0,'L',false,1,'','',true,0,false,true,32,'T',true);$pdf->SetFont('dejavusans','',12);$pdf->SetXY(20,103);$pdf->Cell(170,8,wp_date('d.m.Y, H:i',strtotime($t->starts_at.' UTC'),new DateTimeZone('Europe/Warsaw')));$pdf->SetXY(20,115);$pdf->MultiCell(170,7,$t->venue,0,'L');
-            $pdf->SetFillColor(238,244,246);$pdf->RoundedRect(20,137,170,28,3,'1111','F');$pdf->SetXY(28,143);$pdf->SetFont('dejavusans','B',17);$pdf->Cell(155,14,'SEKTOR '.$seat['sector'].'     RZĄD '.$seat['row'].'     MIEJSCE '.$seat['number']);
-            $pdf->SetFont('dejavusans','B',13);$pdf->SetXY(20,177);$pdf->Cell(80,9,$t->kind==='voucher'?'VOUCHER':($t->kind==='reduced'?'BILET ULGOWY':'BILET NORMALNY'));
-            $pdf->SetFont('dejavusans','',10);$pdf->SetXY(20,191);$pdf->MultiCell(91,6,"Zamówienie #$order_id · Bilet #$t->id\n\nPokaż kod QR przy wejściu.\nBilet umożliwia jedno wejście na wskazany mecz.\nNie udostępniaj kodu innym osobom.",0,'L');
-            $pdf->write2DBarcode(Decka_Domain::token($t,wp_salt('secure_auth')),'QRCODE,H',128,178,60,60,['border'=>0,'padding'=>3,'fgcolor'=>[0,0,0],'bgcolor'=>[255,255,255]],'N');
-            $pdf->SetXY(20,256);$pdf->SetFont('dejavusans','',9);$pdf->MultiCell(170,6,Decka_DB::settings()['ticket_footer']??'W razie zmiany terminu obowiązuje aktualna data meczu. Aktualny bilet znajdziesz na swoim koncie. Numeracja rzędów: rząd 1 najbliżej boiska.',0,'L');
-        }
-        return $pdf->Output('decka-bilety.pdf','S');
+        require_once DECKA_DIR.'vendor/tcpdf/tcpdf.php';$o=Decka_Service::order($order_id);$documents=self::documents($order_id);
+        $pdf=new TCPDF('P','mm','A4',true,'UTF-8',false);$pdf->setPrintHeader(false);$pdf->setPrintFooter(false);$pdf->SetMargins(16,16,16);$pdf->SetAutoPageBreak(false);$pdf->SetCreator('Decka Pelplin');$pdf->SetTitle('Bilety Decka Pelplin');$seats=array_column(Decka_DB::seats()['seats'],null,'id');
+        foreach($documents as $doc){$t=$doc['ticket'];$seat=$seats[$t->seat_id];$package=$doc['package'];$pdf->AddPage();
+            $text=function($x,$y,$w,$h,$value,$size=10,$bold=false,$color=[23,46,76])use($pdf){$pdf->SetFont('dejavusans',$bold?'B':'',$size);$pdf->SetTextColor(...$color);$pdf->SetXY($x,$y);$pdf->MultiCell($w,$h,(string)$value,0,'L',false,1,'','',true,0,false,true,$h,'T',true);};
+            $color=Decka_DB::settings()['ticket_color']??'#19569d';$rgb=preg_match('/^#[a-f0-9]{6}$/i',$color)?[hexdec(substr($color,1,2)),hexdec(substr($color,3,2)),hexdec(substr($color,5,2))]:[25,86,157];$pdf->SetFillColor(...$rgb);$pdf->Rect(0,0,210,5,'F');$pdf->SetFillColor(207,37,25);$pdf->Rect(158,0,52,5,'F');
+            $text(16,11,125,9,'DECKA PELPLIN',20,true);$text(16,22,140,6,'OFICJALNY BILET KLUBOWY',8);$text(152,13,45,12,'Zamówienie #'.$order_id,9);
+            $logo=DECKA_DIR.'assets/logo.png';$image=!empty($t->image_id)&&function_exists('get_attached_file')?get_attached_file((int)$t->image_id):'';
+            $pdf->SetFillColor(236,243,251);$pdf->RoundedRect(16,34,178,53,3,'1111','F');
+            if($image&&is_file($image)&&($dim=getimagesize($image))&&in_array($dim[2],[IMAGETYPE_JPEG,IMAGETYPE_PNG],true)){$scale=min(178/$dim[0],53/$dim[1]);$w=$dim[0]*$scale;$h=$dim[1]*$scale;$pdf->Image($image,16+(178-$w)/2,34+(53-$h)/2,$w,$h);}
+            else{if(is_file($logo))$pdf->Image($logo,24,42,39,33);$text(75,45,110,30,$package?'MINI-KARNET':'DECKA PELPLIN'."\n".'vs '.$t->opponent,18,true);}
+            $pdf->SetDrawColor(207,215,226);$pdf->RoundedRect(16,94,178,89,4,'1111','D');$pdf->Line(142,101,142,177);
+            $title=$package?'MINI-KARNET · '.count($doc['events']).' MECZÓW':'Decka Pelplin - '.$t->opponent;$text(22,100,114,18,$title,15,true);
+            $kind=$t->kind==='voucher'?'VOUCHER':($t->kind==='reduced'?'Bilet ulgowy':'Bilet normalny');$text(22,120,112,6,$kind.' · '.$o->email,8);
+            $text(22,130,110,7,$package?'Jeden kod QR na mecze z poniższej listy':($t->starts_at?wp_date('d.m.Y · H:i',strtotime($t->starts_at.' UTC'),new DateTimeZone('Europe/Warsaw')):'Termin do potwierdzenia'),11,true);
+            $text(22,142,110,13,$t->venue,10);
+            $pdf->SetFillColor(234,241,249);$pdf->RoundedRect(22,162,113,13,2,'1111','F');$text(26,165,106,8,'SEKTOR '.$seat['sector'].'   RZĄD '.$seat['row'].'   MIEJSCE '.$seat['number'],11,true);
+            $pdf->write2DBarcode($doc['token'],'QRCODE,H',147,103,42,42,['border'=>0,'padding'=>3,'fgcolor'=>[0,0,0],'bgcolor'=>[255,255,255]],'N');
+            $text(150,147,38,6,'Bilet #'.$t->id,8);$text(150,156,40,8,number_format($doc['amount']/100,2,',',' ').' PLN',12,true);$text(150,168,40,7,'1 miejsce',9);
+            $all_revoked=!array_filter($doc['events'],fn($row)=>$row->status==='valid');if($o->mode==='test'||$all_revoked)$text(20,185,175,7,$all_revoked?'BILET UNIEWAŻNIONY':'TEST - NIEWAŻNY NA PRAWDZIWY MECZ',10,true,[185,34,26]);
+            if($package){$text(16,195,178,8,'MECZE OBJĘTE MINI-KARNETEM',10,true);$y=202;foreach($doc['events'] as $row){$when=$row->starts_at?wp_date('d.m.Y H:i',strtotime($row->starts_at.' UTC'),new DateTimeZone('Europe/Warsaw')):'Termin do potwierdzenia';$state=$row->status==='revoked'?' / unieważniony':($row->used_at?' / wykorzystany':'');$text(18,$y,174,4.3,$when.' · '.$row->opponent.$state,8);$y+=4;}}
+            else{$text(16,199,178,9,'BILET NA TELEFONIE WYSTARCZY',13,true);$text(16,213,178,25,'Pokaż własny kod QR przy wejściu. Kod pozwala na jedno wejście na wskazany mecz. Nie udostępniaj go innym osobom. Bilet ulgowy wymaga potwierdzenia uprawnienia.',10);$text(16,246,178,24,Decka_DB::settings()['ticket_footer']??'Aktualne bilety i opcje dodania do portfela znajdziesz na swoim koncie kibica.',9);}
+            $text(16,286,178,7,$package?'Terminy mogą się zmienić. Obowiązują regulamin i ustawowe prawa konsumenta.':'deckapelplin.pl · Do zobaczenia w hali!',8);
+        }return $pdf->Output('decka-bilety.pdf','S');
     }
     public static function email(int $id):void {
         global $wpdb;$o=Decka_Service::order($id);if(!$o || $o->mail_sent_at)return;
@@ -28,13 +43,14 @@ final class Decka_Tickets {
         try{$pdf=self::pdf($id);nocache_headers();header('Content-Type: application/pdf');header('Content-Disposition: attachment; filename="Decka-bilety-'.$id.'.pdf"');header('X-Content-Type-Options: nosniff');echo $pdf;}catch(Throwable $e){wp_die(esc_html($e->getMessage()));}exit;
     }
     public static function scan(string $token,int $event_id):array {
-        global $wpdb;if(!preg_match('/^DK1\.(\d+)\.[a-f0-9]{64}$/',trim($token),$m))throw new RuntimeException('Nieprawidłowy kod biletu.');$id=(int)$m[1];$mode=Decka_DB::mode();
-        return Decka_DB::tx(function()use($wpdb,$token,$event_id,$id,$mode){
+        global $wpdb;if(!preg_match('/^DK([12])\.(\d+)\.[a-f0-9]{64}$/',trim($token),$m))throw new RuntimeException('Nieprawidłowy kod biletu.');$package=$m[1]==='2';$id=(int)$m[2];$mode=Decka_DB::mode();
+        return Decka_DB::tx(function()use($wpdb,$token,$event_id,$id,$mode,$package){
             // Lock the order first, consistently with refund processing, then the ticket.
             $oid=$wpdb->get_var($wpdb->prepare('SELECT order_id FROM '.Decka_DB::table('tickets').' WHERE id=%d',$id));
             $o=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('orders').' WHERE id=%d FOR UPDATE',$oid));
             $t=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('tickets').' WHERE id=%d FOR UPDATE',$id));
-            if(!$o || !$t || !hash_equals(Decka_Domain::token($t,wp_salt('secure_auth')),trim($token)))throw new RuntimeException('Nieprawidłowy kod biletu.');
+            if(!$o || !$t || !hash_equals($package?Decka_Domain::package_token($t,wp_salt('secure_auth')):Decka_Domain::token($t,wp_salt('secure_auth')),trim($token)))throw new RuntimeException('Nieprawidłowy kod biletu.');
+            if($package){if(!$o->offer_id)throw new RuntimeException('Nieprawidłowy mini-karnet.');$t=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('tickets').' WHERE order_id=%d AND seat_id=%s AND event_id=%d FOR UPDATE',$o->id,$t->seat_id,$event_id));if(!$t)throw new RuntimeException('Mini-karnet nie obejmuje tego meczu.');$id=(int)$t->id;}
             if($o->mode!==$mode)throw new RuntimeException('Bilet pochodzi z innego środowiska (test/produkcja).');
             if((int)$t->event_id!==$event_id)throw new RuntimeException('Bilet jest na inny mecz.');
             if($t->status!=='valid'||!in_array($o->status,['paid','free','voucher'],true))throw new RuntimeException('Bilet został unieważniony.');

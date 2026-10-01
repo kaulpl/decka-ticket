@@ -7,7 +7,7 @@ const {PNG}=pngRequire('pngjs');
 const uiRequire=createRequire(new URL('../frontend/package.json',import.meta.url));
 const zxRequire=createRequire(uiRequire.resolve('@zxing/browser'));
 const {RGBLuminanceSource,HybridBinarizer,BinaryBitmap,QRCodeReader}=zxRequire('@zxing/library');
-const png=PNG.sync.read(fs.readFileSync('../../outputs/decka-bilety/bilet-podglad.png'));
+const png=PNG.sync.read(fs.readFileSync(process.env.QR_IMAGE||'/tmp/decka-voucher.png'));
 const gray=new Uint8ClampedArray(png.width*png.height);
 for(let i=0;i<gray.length;i++)gray[i]=(png.data[i*4]+2*png.data[i*4+1]+png.data[i*4+2])/4;
 const text=new QRCodeReader().decode(new BinaryBitmap(new HybridBinarizer(new RGBLuminanceSource(gray,png.width,png.height)))).getText();

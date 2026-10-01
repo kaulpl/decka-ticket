@@ -5,7 +5,7 @@ const browser=await chromium.launch(launchOptions);
 const page=await browser.newPage({viewport:{width:1400,height:1100}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
 const base=process.env.WP_URL||'http://127.0.0.1:9410';
 async function api(path,body){return page.evaluate(async({path,body})=>{const c=window.DECKA;const r=await fetch(c.api+path,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json','X-WP-Nonce':c.nonce},body:body===undefined?undefined:JSON.stringify(body)});let data;try{data=await r.json()}catch{data=null}return {status:r.status,data};},{path,body});}
-async function reload(view='shop'){await page.goto(base+'/wp-admin/admin-post.php?action=decka_app&view='+view);await page.getByRole('heading',{name:view==='shop'?'Plan hali':'Panel biletera',exact:true}).waitFor();}
+async function reload(view='shop'){await page.goto(base+'/wp-admin/admin-post.php?action=decka_app&view='+view);await page.getByRole('heading',{name:view==='shop'?/Twoje miejsce/:/Panel biletera/}).waitFor();if(view==='shop')await page.locator('.product-tile').first().click();}
 async function login(email,password){const r=await page.evaluate(async({email,password})=>{const c=window.DECKA;const r=await fetch(c.api+'login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,auth_nonce:c.authNonce})});const data=await r.json();if(r.ok)window.DECKA=data;return {status:r.status,data};},{email,password});assert.equal(r.status,200,JSON.stringify(r));}
 await reload();
 const cat=await api('catalog');assert.equal(cat.data.seats.seats.length,340);assert.ok(cat.data.events.length>=1);
@@ -42,7 +42,7 @@ const pdf=await page.request.get(order.download);assert.equal(pdf.status(),200);
 const adminData=await api('admin/bootstrap');assert.equal(adminData.status,200);const csvRes=await page.request.get(adminData.data.links.csv);assert.equal(csvRes.status(),200);assert.ok((await csvRes.text()).includes('voucher@example.test'));
 await reload();await api('logout',{});await reload('gate');await login('gate@example.test','Local-Testing-Only-123');
 const gate=await api('gate/events');assert.equal(gate.status,200);assert.equal((await api('admin/voucher',{})).status,403);
-await page.goto(base+'/wp-admin/admin-post.php?action=decka_app&view=gate');await page.getByRole('heading',{name:'Sprawdź bilet',exact:true}).waitFor();
+await page.goto(base+'/wp-admin/admin-post.php?action=decka_app&view=gate');await page.getByRole('heading',{name:'Decka · bileter',exact:true}).waitFor();
 await page.screenshot({path:'tests/artifacts/panel-biletera.png',fullPage:true});
 fs.writeFileSync('tests/wordpress-errors.json',JSON.stringify(errors));assert.deepEqual(errors,[]);
 console.log('PASS WordPress: activation, real registration/login and session nonce, permissions, missing Stripe config leaves no holds, voucher, duplicate seat prevention, protected PDF, admin CSV, gate UI.');
