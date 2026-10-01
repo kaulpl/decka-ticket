@@ -1,13 +1,13 @@
-# Decka Bilety 0.2.0
+# Decka Bilety 0.3.0
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
-1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.2.0.zip`. Aktywuj wtyczkę.
-2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring i zlib. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
+1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.0.zip`. Aktywuj wtyczkę.
+2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
 3. Utwórz stronę **Bilety** z blokiem Krótki kod: `[decka_bilety]`.
-4. Utwórz osobną stronę **Bileter** z kodem `[decka_bileter]`.
+4. Skaner działa pod adresem **/bileter** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
 5. Ustaw w WordPressie politykę prywatności, a w **Decka Bilety → Ustawienia** adres regulaminu sprzedaży.
 6. Skonfiguruj niezawodną wysyłkę SMTP w WordPressie. PDF jest przekazywany do `wp_mail` jako załącznik; pozytywna odpowiedź oznacza przyjęcie przez system pocztowy, nie gwarancję doręczenia do skrzynki.
 7. Zapewnij wywoływanie WP-Cron co minutę przez harmonogram hostingu. Kolejka sprawdza płatności, zwalnia potwierdzone wygasłe sesje i wysyła bilety. Przycisk **Sprawdź płatności i kolejkę e-mail** pozwala uruchomić ją ręcznie. Na stronie bez ruchu sam WP-Cron może reagować z opóźnieniem.
@@ -38,7 +38,7 @@ Potwierdzenie na stronie powrotu ze Stripe nie wystarcza do wystawienia biletu. 
 - Położenie i numery pochodzą z komórek Excela, w tym szerszego górnego rzędu. Puste komórki zachowują odstępy.
 - Excel nie zawiera nazw rzędów: przyjęto **rząd 1 najbliżej boiska, rząd 8 najdalej**. Numery miejsc pozostają dokładnie takie jak w pliku.
 - Najpierw widać plan hali z kropkami; kliknięcie sektora otwiera widok z numerami. Na małym telefonie powiększony sektor można przesuwać poziomo.
-- Wolne: granatowe. Wybór kibica: zielony. **Opłacone: szare**. Oczekujące na płatność: bursztynowe. Voucher, bilet bezpłatny lub blokada po zwrocie: fioletowe.
+- Klient widzi tylko wolne i zajęte miejsca oraz swój wybór. Panel klubu zachowuje osobne kolory opłaconych, oczekujących, voucherów i blokad.
 - Dostępność odświeża się co 8 sekund, a serwer sprawdza ją ponownie podczas zakupu. Brak połączenia wyłącza możliwość wyboru.
 - Maksymalnie 10 miejsc w jednym zamówieniu. Wybór w koszyku nie blokuje miejsc; blokada następuje przy tworzeniu płatności po zalogowaniu.
 - Sesja Checkout trwa około **31 minut**. Miejsce jest zwalniane dopiero po potwierdzeniu wygaśnięcia/anulowania przez Stripe, a nie po samym upływie lokalnego zegara. Przy niejednoznacznym błędzie sieci blokada pozostaje, a wtyczka ponawia zapytanie z tym samym kluczem operacji.
@@ -55,7 +55,7 @@ Przy każdym meczu można ustawić przeciwnika, halę, termin, przedział godzin
 
 Kibic wybiera miejsca, następnie loguje się lub zakłada konto (co najmniej 12 znaków hasła), wybiera rodzaje biletów i przechodzi do Stripe. Domyślne ceny: **normalny 25 zł, ulgowy 15 zł**; można je zmienić w ustawieniach. Warunki uprawnienia do ulgi należy opisać w regulaminie klubu.
 
-Po potwierdzeniu płatności powstaje osobny bilet A4 z QR dla każdego miejsca i meczu. Całe zamówienie trafia do jednego wielostronicowego PDF. Plik jest wysyłany e-mailem i dostępny w **Moje bilety**. Nie jest przechowywany w publicznym katalogu; pobieranie wymaga konta właściciela lub administratora. QR nie zawiera danych osobowych.
+Po potwierdzeniu płatności powstaje osobny bilet A4 z QR dla każdego miejsca. Mini-karnet ma jeden dokument i jeden QR na wszystkie objęte mecze; wejścia są rejestrowane osobno dla każdego meczu. Całe zamówienie trafia do jednego wielostronicowego PDF. Plik jest wysyłany e-mailem i dostępny w **Moje bilety**. Nie jest przechowywany w publicznym katalogu; pobieranie wymaga konta właściciela lub administratora. QR nie zawiera danych osobowych.
 
 W WordPress **Użytkownicy → Dodaj użytkownika** utwórz konto obsługi i nadaj rolę **Bileter Decka**. Bileter loguje się na dedykowanej stronie, wybiera mecz i skanuje aparatem telefonu albo wkleja kod z czytnika. Każdy poprawny skan od razu zapisuje wejście. Sprawdzane są: podpis QR, mecz, środowisko, status biletu, przedział wejść oraz wcześniejsze wykorzystanie. Przy bilecie ulgowym panel przypomina o sprawdzeniu uprawnienia.
 
@@ -63,9 +63,9 @@ Aparat wymaga HTTPS i zezwolenia przeglądarki. Skanowanie wymaga internetu; nie
 
 ## VOUCHER, mini-karnety i promocje
 
-**VOUCHER:** administrator wybiera mecz i miejsca na mapie w podstronie Bilety i vouchery oraz podaje e-mail odbiorcy. Powstaje bezpłatny bilet z napisem VOUCHER i QR; wysyłka trafia do kolejki. Miejsce jest zajęte i fioletowe, nie szare. Wydany voucher jest przypisany do konta administratora; odbiorca korzysta z załącznika e-mail.
+**VOUCHER:** administrator wybiera mecz i miejsca na mapie w podstronie Bilety i vouchery oraz podaje e-mail odbiorcy. Powstaje bezpłatny bilet z napisem VOUCHER i QR; wysyłka trafia do kolejki. W panelu klubu miejsce jest oznaczone jako voucher, a klient widzi je jako zajęte. Wydany voucher jest przypisany do konta administratora; odbiorca korzysta z załącznika e-mail.
 
-**Mini-karnet:** podaj nazwę, ID od 2 do 20 wybranych meczów, cenę normalną i ulgową za cały pakiet, opcjonalne daty dostępności i aktywuj ofertę. Przykład: ID trzech kolejnych domowych meczów. To samo miejsce musi być dostępne na każdym z nich. Cały pakiet jest rezerwowany w jednej transakcji. Sprzedaż każdego meczu w pakiecie musi być otwarta. Zmiana zawartości oferty nie zmienia już kupionych biletów.
+**Mini-karnet:** podaj nazwę, ID od 2 do 20 wybranych meczów, cenę normalną i ulgową za cały pakiet, opcjonalne daty dostępności i aktywuj ofertę. Przykład: ID trzech kolejnych domowych meczów. To samo miejsce musi być dostępne na każdym z nich. Cały pakiet jest rezerwowany w jednej transakcji. Pakiet ma własny przełącznik sprzedaży; mecze nie muszą być otwarte w sprzedaży pojedynczej. Zmiana zawartości oferty nie zmienia już kupionych biletów.
 
 **Promocja:** kod procentowy lub kwotowy (rabat w zł na całe zamówienie), limit użyć, zakres meczów, daty i włącznik. Limit użyć jest osobny dla TEST/LIVE i uwzględnia oczekujące zamówienia. Kod obejmujący tylko część meczów mini-karnetu jest odrzucany. Rabaty oblicza serwer. Nie łączy się wielu kodów. Przy rabacie 100% bilet jest wystawiany bez Stripe; dodatnia końcowa kwota musi wynosić co najmniej 2 zł.
 
@@ -116,7 +116,7 @@ Biblioteki: Next.js/React, ZXing, Lucide i TCPDF 6.11.4. Licencje zależności i
 - Terminarz PZKosz: https://rozgrywki.pzkosz.pl/liga/1/druzyny/d/7625/decka-pelplin/terminarz.html
 
 
-## Panel administratora 0.2.0
+## Panel administratora 0.3.0
 
 Nowy panel Next.js jest osadzony w WordPressie i korzysta z REST API bez przeładowywania strony. Wszystkie odczyty i zapisy administracyjne wymagają uprawnienia `decka_manage` oraz prawidłowej sesji/nonce WordPressa.
 
@@ -134,4 +134,24 @@ Nowy panel Next.js jest osadzony w WordPressie i korzysta z REST API bez przeła
 
 Filtr meczu działa dla pulpitu, raportów, zamówień, biletów, planu hali i historii wejść. Katalog meczów, ofert, kibiców i ustawienia są wspólne. Raporty przychodów dotyczą opłaconych pozycji, nie salda rozliczeń Stripe.
 
-Konfigurację wydawania paczek i przycisku aktualizacji opisuje [REPOZYTORIUM.md](REPOZYTORIUM.md). Zmiany nie zostały opublikowane z tego środowiska.
+Konfigurację wydawania paczek i przycisku aktualizacji opisuje [REPOZYTORIUM.md](REPOZYTORIUM.md). Po połączeniu PR-a do main i udanych testach GitHub Actions automatycznie publikuje kolejną wersję.
+
+## Zmiany w 0.3.0 i konfiguracja integracji
+
+Zakup zaczyna się od kafli otwartych meczów, a dalej aktywnych mini-karnetów. Po wyborze produktu pojawia się mapa hali. Mini-karnet wymaga potwierdzenia informacji o możliwych zmianach terminów, z zachowaniem ustawowych praw konsumenta. Pakiet może zawierać mecz bez daty; wejście wymaga ustawienia okna wejść. Zmiana listy meczów oferty nie zmienia już wydanych biletów.
+
+Ustawienia są widoczne bez popupu. Zmiana globalnych cen aktualizuje wszystkie mecze; edycja cen meczu zmienia tylko ten mecz. Limit biletów na kibica na mecz uwzględnia poprzednie opłacone i oczekujące zakupy oraz mini-karnety. Jednorazowo nadal można kupić do 10 miejsc. Vouchery administratora nie podlegają limitowi zakupów kibica.
+
+Każdy mecz może mieć grafikę JPG/PNG (do 8 MB i 6000 px), pokazywaną na kaflu i w PDF. Plan hali z filtrem „Wszystkie mecze” pokazuje sumę zajętości. Blokada wielu meczów jest atomowa: jakakolwiek kolizja z zamówieniem wycofuje całą operację. Nowe mecze dodane później nie dziedziczą ręcznych blokad.
+
+**Stripe:** `sk_test_…` / `sk_live_…` to klucz serwera. `pk_…` jest kluczem publicznym i w tym modelu przekierowania Checkout nie jest potrzebny. `whsec_…` nie znajduje się na liście kluczy API: w Stripe otwórz **Workbench → Webhooks → Add destination**, wybierz swoje konto i zdarzenia snapshot wymienione powyżej, wpisz URL ze strony ustawień, zapisz i odsłoń **Signing secret**. Osobno skonfiguruj test i produkcję. [Dokumentacja Stripe](https://docs.stripe.com/webhooks).
+
+**Logowanie Google:** w Google Cloud skonfiguruj ekran zgody OAuth i klienta typu Web application. Wklej Client ID i Client secret do ustawień wtyczki. Authorized redirect URI musi być dokładnie adresem pokazanym w panelu, np. `https://deckapelplin.pl/wp-admin/admin-post.php?action=decka_google_callback`. Nowi kibice mogą zarejestrować się przez Google; istniejący logują się hasłem i wybierają „Połącz konto Google”. Nie łączymy kont automatycznie wyłącznie po zgodnym e-mailu. [Google OIDC](https://developers.google.com/identity/openid-connect/openid-connect).
+
+**Apple Wallet:** potrzebne aktywne konto Apple Developer, Pass Type ID, Team ID, certyfikat Pass Type i odpowiadający mu klucz prywatny w PEM oraz aktualny certyfikat pośredni Apple WWDR. Pola są w ustawieniach, sekrety są szyfrowane. Serwer generuje podpisany plik `.pkpass`, a nie przemianowany PDF. [Certyfikaty Apple](https://developer.apple.com/help/account/capabilities/create-wallet-identifiers-and-certificates/).
+
+**Google Wallet:** potrzebne konto wydawcy z prawem publikacji, Issuer ID i klucz JSON konta usługi mającego dostęp do wydawcy. Wtyczka podpisuje link „Dodaj do Google Wallet”. W trybie demo Google ogranicza odbiorców do testerów. [Google Wallet](https://developers.google.com/wallet/generic/web).
+
+Przyciski portfeli są dostępne przy opłaconych biletach na koncie kibica po konfiguracji. Portfele zawierają ten sam QR co PDF. Nie wdrożono push aktualizacji portfeli: przy zmianie terminu należy sprawdzić konto kibica, a klub powiadamia kibiców. Skaner zawsze sprawdza bieżący status w bazie, również po zwrocie lub odwołaniu meczu. Produkcyjne akceptowanie passów wymaga prób z prawdziwymi certyfikatami/kontami klubu.
+
+**iOS:** poprawiono wysokość osadzenia (pełny koszyk), ścieżki czcionek i dodano pełnoekranowy link awaryjny. Widok działa w lokalnym mobilnym WebKit. Całkowicie pustego widoku na publicznej stronie nie udało się odtworzyć; wymagany odbiór na zgłoszonym fizycznym iPhonie. Test WebKit nie zastępuje testu aparatu i uprawnień na urządzeniu.

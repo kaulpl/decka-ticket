@@ -20,11 +20,11 @@ final class Decka_API {
     }
     public static function catalog():array {
         global $wpdb;$s=Decka_DB::settings();$now=gmdate('Y-m-d H:i:s');
-        return ['mode'=>Decka_DB::mode(),'normal'=>(int)($s['normal']??2500),'reduced'=>(int)($s['reduced']??1500),'seats'=>Decka_DB::seats(),'events'=>$wpdb->get_results($wpdb->prepare('SELECT id,opponent,starts_at,date_label,venue,sale_open FROM '.Decka_DB::table('events').' WHERE cancelled=0 AND (starts_at>%s OR starts_at IS NULL) ORDER BY starts_at',$now)),'offers'=>$wpdb->get_results($wpdb->prepare('SELECT * FROM '.Decka_DB::table('offers').' WHERE active=1 AND (starts_at IS NULL OR starts_at<=%s) AND (ends_at IS NULL OR ends_at>=%s)',$now,$now)),'registration'=>!empty($s['registration'])];
+        $catalog=['mode'=>Decka_DB::mode(),'normal'=>(int)($s['normal']??2500),'reduced'=>(int)($s['reduced']??1500),'seats'=>Decka_DB::seats(),'events'=>$wpdb->get_results($wpdb->prepare('SELECT id,opponent,starts_at,date_label,venue,sale_open,normal_price,reduced_price,image_id FROM '.Decka_DB::table('events').' WHERE cancelled=0 AND (starts_at>%s OR starts_at IS NULL) ORDER BY starts_at',$now)),'offers'=>$wpdb->get_results($wpdb->prepare('SELECT * FROM '.Decka_DB::table('offers').' WHERE active=1 AND (starts_at IS NULL OR starts_at<=%s) AND (ends_at IS NULL OR ends_at>=%s)',$now,$now)),'registration'=>!empty($s['registration']),'max_per_fan'=>(int)($s['max_per_fan']??10)];foreach($catalog['events'] as $event)$event->image_url=$event->image_id?wp_get_attachment_image_url((int)$event->image_id,'large'):null;return $catalog;
     }
     public static function availability(string $ids):array {
         global $wpdb;$events=array_values(array_unique(array_filter(array_map('absint',explode(',',$ids)))));if(!$events||count($events)>20)throw new RuntimeException('Niepoprawna lista meczów.');$in=implode(',',$events);
-        $rows=$wpdb->get_results($wpdb->prepare('SELECT event_id,seat_id,state FROM '.Decka_DB::table('inventory')." WHERE mode=%s AND event_id IN ($in)",Decka_DB::mode()),ARRAY_A);return ['seats'=>$rows,'updated_at'=>gmdate('c')];
+        $rows=$wpdb->get_results($wpdb->prepare('SELECT event_id,seat_id,"busy" state FROM '.Decka_DB::table('inventory')." WHERE mode=%s AND event_id IN ($in)",Decka_DB::mode()),ARRAY_A);return ['seats'=>$rows,'updated_at'=>gmdate('c')];
     }
     private static function auth(WP_REST_Request $r,bool $register):array {
         $origin=$r->get_header('origin');$expected=wp_parse_url(home_url());$actual=wp_parse_url($origin);
@@ -41,7 +41,7 @@ final class Decka_API {
     }
     public static function orders():array {
         global $wpdb;$rows=$wpdb->get_results($wpdb->prepare('SELECT id,status,mode,total,created_at,mail_sent_at,checkout_url FROM '.Decka_DB::table('orders').' WHERE user_id=%d ORDER BY id DESC LIMIT 100',get_current_user_id()),ARRAY_A);
-        foreach($rows as &$o){$o['download']=in_array($o['status'],['paid','free','voucher'],true)?add_query_arg('_wpnonce',wp_create_nonce('decka_pdf_'.$o['id']),admin_url('admin-post.php?action=decka_pdf&order='.$o['id'])):null;$o['items']=$wpdb->get_results($wpdb->prepare('SELECT i.seat_id,i.kind,e.opponent,e.starts_at FROM '.Decka_DB::table('items').' i JOIN '.Decka_DB::table('events').' e ON e.id=i.event_id WHERE i.order_id=%d',$o['id']),ARRAY_A);}return $rows;
+        foreach($rows as &$o){$o['download']=in_array($o['status'],['paid','free','voucher'],true)?add_query_arg('_wpnonce',wp_create_nonce('decka_pdf_'.$o['id']),admin_url('admin-post.php?action=decka_pdf&order='.$o['id'])):null;$o['wallet']=$o['download']?Decka_Wallet::links((int)$o['id']):[];$o['items']=$wpdb->get_results($wpdb->prepare('SELECT i.seat_id,i.kind,e.opponent,e.starts_at FROM '.Decka_DB::table('items').' i JOIN '.Decka_DB::table('events').' e ON e.id=i.event_id WHERE i.order_id=%d',$o['id']),ARRAY_A);}return $rows;
     }
     public static function webhook(WP_REST_Request $r):array {
         $mode=$r['mode'];$raw=$r->get_body();if(!Decka_Domain::signature($raw,(string)$r->get_header('stripe-signature'),Decka_Stripe::secret($mode,'webhook'),time()))throw new RuntimeException('Nieprawidłowy podpis Stripe.');
@@ -58,17 +58,21 @@ final class Decka_API {
         }
         return ['received'=>true];
     }
-    public static function config():array {return ['api'=>rest_url('decka/v1/'),'nonce'=>wp_create_nonce('wp_rest'),'authNonce'=>wp_create_nonce('decka_auth'),'user'=>is_user_logged_in()?['name'=>wp_get_current_user()->display_name,'email'=>wp_get_current_user()->user_email,'gate'=>current_user_can('decka_scan'),'admin'=>current_user_can('decka_manage')]:null,'resetUrl'=>wp_lostpassword_url(),'privacyUrl'=>get_privacy_policy_url(),'termsUrl'=>Decka_DB::settings()['terms_url']??''];}
+    public static function config():array {return ['api'=>rest_url('decka/v1/'),'nonce'=>wp_create_nonce('wp_rest'),'authNonce'=>wp_create_nonce('decka_auth'),'user'=>is_user_logged_in()?['name'=>wp_get_current_user()->display_name,'email'=>wp_get_current_user()->user_email,'gate'=>current_user_can('decka_scan'),'admin'=>current_user_can('decka_manage')]:null,'resetUrl'=>wp_lostpassword_url(),'privacyUrl'=>get_privacy_policy_url(),'termsUrl'=>Decka_DB::settings()['terms_url']??'','googleLogin'=>!empty(Decka_DB::settings()['google_client_id'])&&!empty(Decka_DB::settings()['google_client_secret'])?add_query_arg(['action'=>'decka_google_start','_wpnonce'=>wp_create_nonce('decka_auth')],admin_url('admin-post.php')):null];}
     public static function embed(string $view):string {
         $url=add_query_arg(['action'=>'decka_app','view'=>$view],admin_url('admin-post.php'));
-        return '<iframe title="'.($view==='gate'?'Panel biletera':'Bilety Decka Pelplin').'" src="'.esc_url($url).'" style="width:100%;height:1150px;border:0;border-radius:18px" allow="camera; payment" loading="eager"></iframe>';
+        $id=wp_unique_id('decka-shop-');
+        return '<div class="decka-embed"><iframe id="'.esc_attr($id).'" title="'.($view==='gate'?'Panel biletera':'Bilety Decka Pelplin').'" src="'.esc_url($url).'" style="display:block;width:100%;min-height:700px;height:1150px;border:0;border-radius:18px" allow="camera; payment" loading="eager"></iframe><p><a href="'.esc_url($url).'">Otwórz bilety na pełnym ekranie</a></p></div><script>(function(){var f=document.getElementById('.wp_json_encode($id).');window.addEventListener("message",function(e){if(e.source!==f.contentWindow||e.origin!==window.location.origin||!e.data||e.data.type!=="decka-height")return;var h=Number(e.data.height);if(Number.isFinite(h)&&h>=200&&h<=30000)f.style.height=Math.ceil(h)+"px";});})();</script>';
+
     }
     public static function app():void {
         $view=sanitize_key($_GET['view']??'shop');if($view==='admin'&&!current_user_can('decka_manage'))wp_die('Brak dostępu.',403);
         $file=DECKA_DIR.($view==='admin'?'assets/admin/index.html':'assets/index.html');if(!file_exists($file))wp_die('Brak zbudowanego interfejsu. Zainstaluj pełną paczkę ZIP.');
-        nocache_headers();header('Content-Type: text/html; charset=UTF-8');header('X-Frame-Options: SAMEORIGIN');header('Referrer-Policy: same-origin');
+        status_header(200);nocache_headers();header('Content-Type: text/html; charset=UTF-8');header('X-Frame-Options: SAMEORIGIN');header('Referrer-Policy: same-origin');
         $config=self::config();$config['view']=sanitize_key($_GET['view']??'shop');$config['order']=absint($_GET['order']??0);$config['adminScreen']=sanitize_key($_GET['screen']??'overview');
-        $html=file_get_contents($file);$inject='<base href="'.esc_url(DECKA_URL.'assets/').'" /><script>window.DECKA='.wp_json_encode($config,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).';</script>';
+        $html=file_get_contents($file);
+        // Use explicit asset URLs in embedded documents, independently of the host page path.
+        $html=str_replace(['src="./_next/','href="./_next/'],['src="'.esc_url(DECKA_URL.'assets/_next/'),'href="'.esc_url(DECKA_URL.'assets/_next/')],$html);$inject='<base href="'.esc_url(DECKA_URL.'assets/').'" /><script>window.DECKA='.wp_json_encode($config,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).';</script>';
         echo str_replace('<head>','<head>'.$inject,$html);exit;
     }
 }

@@ -16,14 +16,17 @@ final class Decka_Service {
         if(!is_email($email))throw new RuntimeException('Podaj prawidłowy adres e-mail.');
         $offer_id=$voucher?0:absint($input['offer_id']??0);$event_id=absint($input['event_id']??0);
         $id=Decka_DB::tx(function()use($wpdb,$mode,$uid,$key,$chosen,$email,$voucher,$offer_id,$event_id,$input){
-            $now=gmdate('Y-m-d H:i:s');$settings=Decka_DB::settings();$offer=null;
+            $now=gmdate('Y-m-d H:i:s');$settings=Decka_DB::settings();$offer=null;$event_rows=[];
             if($offer_id){$offer=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('offers').' WHERE id=%d FOR UPDATE',$offer_id));if(!$offer || !$offer->active || ($offer->starts_at && $offer->starts_at>$now)||($offer->ends_at && $offer->ends_at<$now))throw new RuntimeException('Oferta nie jest już dostępna.');}
             $events=$offer?json_decode($offer->event_ids,true):[$event_id];$events=array_values(array_unique(array_map('intval',$events)));sort($events);
+            if($offer && empty($input['package_ack']))throw new RuntimeException('Potwierdź zapoznanie się z zasadami terminów mini-karnetu.');
             if(!$events || in_array(0,$events,true))throw new RuntimeException('Wybierz mecz.');
-            foreach($events as $eid){$ev=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('events').' WHERE id=%d FOR UPDATE',$eid));if(!$ev || $ev->cancelled || !$ev->starts_at || $ev->starts_at<=$now || (!$voucher && !$ev->sale_open))throw new RuntimeException('Sprzedaż na jeden z meczów jest zamknięta.');}
+            foreach($events as $eid){$ev=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('events').' WHERE id=%d FOR UPDATE',$eid));if(!$ev || $ev->cancelled || ($ev->starts_at && $ev->starts_at<=$now) || (!$offer && (!$ev->starts_at || (!$voucher && !$ev->sale_open))))throw new RuntimeException('Sprzedaż na jeden z meczów jest zamknięta.');$event_rows[$eid]=$ev;}
             $again=$wpdb->get_var($wpdb->prepare('SELECT id FROM '.Decka_DB::table('orders').' WHERE user_id=%d AND mode=%s AND request_key=%s',$uid,$mode,$key));if($again)return (int)$again;
+            $limit=max(1,(int)($settings['max_per_fan']??10));
+            if(!$voucher)foreach($events as $eid){$used=(int)$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM '.Decka_DB::table('items').' i JOIN '.Decka_DB::table('orders').' o ON o.id=i.order_id WHERE o.user_id=%d AND o.mode=%s AND i.event_id=%d AND o.status IN ("creating","pending","paid","free")',$uid,$mode,$eid));if($used+count($chosen)>$limit)throw new RuntimeException('Limit '.$limit.' biletów na kibica na mecz został przekroczony (wliczamy oczekujące płatności).');}
             $raw=[];$total=0;
-            foreach($chosen as $seat=>$kind){$price=$voucher?0:(int)($offer?($kind==='normal'?$offer->normal_price:$offer->reduced_price):($settings[$kind]??($kind==='normal'?2500:1500)));if($price<0)throw new RuntimeException('Nieprawidłowa cena.');$total+=$price;$amounts=Decka_Domain::allocate($price,count($events));foreach($events as $i=>$eid)$raw[]=['event_id'=>$eid,'seat_id'=>(string)$seat,'kind'=>$voucher?'voucher':$kind,'amount'=>$amounts[$i]];}
+            foreach($chosen as $seat=>$kind){$price=$voucher?0:(int)($offer?($kind==='normal'?$offer->normal_price:$offer->reduced_price):($event_rows[$event_id]->{$kind.'_price'}??$settings[$kind]??($kind==='normal'?2500:1500)));if($price<0)throw new RuntimeException('Nieprawidłowa cena.');$total+=$price;$amounts=Decka_Domain::allocate($price,count($events));foreach($events as $i=>$eid)$raw[]=['event_id'=>$eid,'seat_id'=>(string)$seat,'kind'=>$voucher?'voucher':$kind,'amount'=>$amounts[$i]];}
             $promo=null;$code=strtoupper(sanitize_text_field($input['promo']??''));$before=$total;
             if($code && !$voucher){
                 $promo=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('promos').' WHERE code=%s FOR UPDATE',$code));
@@ -36,7 +39,7 @@ final class Decka_Service {
             }
             if(!$voucher && $total>0 && $total<200)throw new RuntimeException('Po rabacie zamówienie musi wynosić co najmniej 2 zł albo 0 zł.');
             if($total>0 && (!Decka_Stripe::secret($mode)||!Decka_Stripe::secret($mode,'webhook')))throw new RuntimeException('Płatności nie są jeszcze skonfigurowane. Skontaktuj się z klubem.');
-            $oid=Decka_DB::insert('orders',['mode'=>$mode,'user_id'=>$uid,'request_key'=>$key,'email'=>$email,'status'=>'creating','total'=>$total,'discount'=>$before-$total,'offer_id'=>$offer_id?:null,'promo_id'=>$promo?$promo->id:null,'created_at'=>$now]);
+            $oid=Decka_DB::insert('orders',['mode'=>$mode,'user_id'=>$uid,'request_key'=>$key,'email'=>$email,'status'=>'creating','total'=>$total,'discount'=>$before-$total,'offer_id'=>$offer_id?:null,'promo_id'=>$promo?$promo->id:null,'created_at'=>$now,'package_ack'=>$offer?'schedule-v1':null]);
             foreach($raw as $item){
                 $occupied=$wpdb->get_var($wpdb->prepare('SELECT order_id FROM '.Decka_DB::table('inventory').' WHERE mode=%s AND event_id=%d AND seat_id=%s',$mode,$item['event_id'],$item['seat_id']));
                 if($occupied!==null)throw new RuntimeException('Miejsce '.$item['seat_id'].' jest już zajęte na jednym z meczów. Wybierz inne.');

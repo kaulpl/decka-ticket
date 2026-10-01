@@ -88,3 +88,18 @@ Import terminarza uruchamia się ręcznie. Rzędy 1–8 przyjęto od strony bois
 Testy PHP wykonano lokalnie w PHP WASM (runtime zgłasza PHP 8.5), a panel w WordPress Playground z SQLite. Adapter testowy zgłasza ostrzeżenie o przestarzałej metodzie PDO w PHP 8.5; nie dotyczy kodu wtyczki. Nie zastępuje to testu konkurencyjnych zakupów na docelowym MySQL/InnoDB.
 
 Nie wykonano instalacji aktualizacji z publicznego GitHub Release — wydanie nie zostało opublikowane. Pipeline GitHub Actions przygotowano lokalnie; nie był uruchamiany na GitHubie. Rzeczywiste Stripe/BLIK, dostarczalność SMTP i hosting nadal wymagają odbioru na docelowym środowisku.
+
+## Wydanie 0.3.0 — 30.09.2026
+
+- Next.js: kompilacja produkcyjna i TypeScript; składnia wszystkich plików PHP.
+- 47 sprawdzeń integracyjnych: płatności i powtórzenia webhooków, kolizje miejsc, trzy mecze w pakiecie, jeden QR pakietu i niezależne wejścia, odrzucenie ponownego skanu i obcego meczu, limit kibica z uwzględnieniem oczekujących płatności, ceny meczu, pakiet z nieznanym terminem, PDF.
+- 20 sprawdzeń domeny, 20 aktualizatora i 5 wersjonowania wydania.
+- 12 sprawdzeń tożsamości Google / podpisów Wallet: podpis, odbiorca, wystawca, nonce, ważność, potwierdzony e-mail, algorytm i klucz; zachowanie właściwego QR i listy meczów.
+- Lokalny WordPress: 11 podstron panelu, ustawienia inline, mecze, mini-karnet, promocja, voucher, PDF, blokada/zwolnienie, eksport i uprawnienia biletera. Dodatkowo ceny globalne / jednego meczu, blokowanie wszystkich meczów z pełnym wycofaniem przy kolizji, lista bileterów i upload grafiki.
+- Rejestracja i logowanie klienta, odświeżenie nonce, brak Stripe nie pozostawia blokady, chroniony PDF.
+- PDF wyrenderowany i obejrzany; QR odczytany z obrazu PDF i porównany z tokenem.
+- Mobilny WebKit: kafle → sektor → miejsce → logowanie, bez przepełnienia poziomego, pełna wysokość osadzonego koszyka, tylko wolne/zajęte, brak linku Bileter w sklepie; działa /bileter.
+
+Publiczna strona przekierowuje /kup-bilet na /kup-bilety/. W odczycie WebKit nie wystąpił całkowicie pusty ekran. Potwierdzono ucinanie koszyka przez wysokość iframe i błędne względne adresy czcionek; poprawiono je. Odbiór na fizycznym iPhonie i test aparatu pozostają konieczne.
+
+Testy lokalne używają SQLite i atrap Stripe, więc nie potwierdzają współbieżności InnoDB, rzeczywistych płatności, doręczenia poczty ani akceptacji portfeli przez konta Apple/Google klubu. Konfiguracja i testy produkcyjne tych usług wymagają właściwych kluczy/certyfikatów. Test Apple w CI sprawdza archiwum, manifest i podpis na certyfikacie jednorazowym; nie jest certyfikatem klubu.
