@@ -80,11 +80,11 @@ final class Decka_DB {
             $seen=[];$safe=[];$definitions=[];
             foreach(preg_split("/'(?:''|[^'])*'(*SKIP)(*F)|, /",$schema) as $definition){if(preg_match('/^([a-z_]+) (.+)$/',$definition,$part))$definitions[$part[1]]=$part[2];}
             foreach($columns as $c){
-                $seen[]=$c->Field;$legacy=false;
+                $seen[]=$c->Field;
                 $known=in_array($c->Field,$expected,true);
                 // Defaults can themselves contain private values; export only their category.
-                $safe[]=['name'=>$c->Field,'type'=>$c->Type,'nullable'=>$c->Null==='YES','default'=>$c->Default===null?'NULL/none':($c->Default===''?'empty':'set'),'extra'=>$c->Extra,'expected'=>$known,'compatibility'=>$legacy];
-                if(!$known&&!$legacy&&$c->Null!=='YES'&&$c->Default===null&&!preg_match('/auto_increment|generated/i',$c->Extra))$report['issues'][]="$name.$c->Field: dodatkowe wymagane pole bez wartości domyślnej";
+                $safe[]=['name'=>$c->Field,'type'=>$c->Type,'nullable'=>$c->Null==='YES','default'=>$c->Default===null?'NULL/none':($c->Default===''?'empty':'set'),'extra'=>$c->Extra,'expected'=>$known];
+                if(!$known&&$c->Null!=='YES'&&$c->Default===null&&!preg_match('/auto_increment|generated/i',$c->Extra))$report['issues'][]="$name.$c->Field: dodatkowe wymagane pole bez wartości domyślnej";
                 if($known){
                     $definition=$definitions[$c->Field];preg_match('/^([a-z]+(?:\(\d+\))?(?: unsigned)?)/',$definition,$type);
                     $normalize=fn($t)=>preg_replace('/\b(bigint|int|tinyint)\(\d+\)/','$1',strtolower($t));
