@@ -89,13 +89,14 @@ Testy PHP wykonano lokalnie w PHP WASM (runtime zgłasza PHP 8.5), a panel w Wor
 
 Nie wykonano instalacji aktualizacji z publicznego GitHub Release — wydanie nie zostało opublikowane. Pipeline GitHub Actions przygotowano lokalnie; nie był uruchamiany na GitHubie. Rzeczywiste Stripe/BLIK, dostarczalność SMTP i hosting nadal wymagają odbioru na docelowym środowisku.
 
-## Wydanie 0.3.0 — 30.09.2026
+## Wydanie 0.3.0 — 01.10.2026
 
 - Next.js: kompilacja produkcyjna i TypeScript; składnia wszystkich plików PHP.
 - 47 sprawdzeń integracyjnych: płatności i powtórzenia webhooków, kolizje miejsc, trzy mecze w pakiecie, jeden QR pakietu i niezależne wejścia, odrzucenie ponownego skanu i obcego meczu, limit kibica z uwzględnieniem oczekujących płatności, ceny meczu, pakiet z nieznanym terminem, PDF.
 - 20 sprawdzeń domeny, 20 aktualizatora i 5 wersjonowania wydania.
 - 12 sprawdzeń tożsamości Google / podpisów Wallet: podpis, odbiorca, wystawca, nonce, ważność, potwierdzony e-mail, algorytm i klucz; zachowanie właściwego QR i listy meczów.
 - Lokalny WordPress: 11 podstron panelu, ustawienia inline, mecze, mini-karnet, promocja, voucher, PDF, blokada/zwolnienie, eksport i uprawnienia biletera. Dodatkowo ceny globalne / jednego meczu, blokowanie wszystkich meczów z pełnym wycofaniem przy kolizji, lista bileterów i upload grafiki.
+- Skaner WordPress: odczyt QR z rzeczywistego PDF, pierwsze wejście przyjęte, drugie odrzucone; widok 390 × 844 bez przewijania.
 - Rejestracja i logowanie klienta, odświeżenie nonce, brak Stripe nie pozostawia blokady, chroniony PDF.
 - PDF wyrenderowany i obejrzany; QR odczytany z obrazu PDF i porównany z tokenem.
 - Mobilny WebKit: kafle → sektor → miejsce → logowanie, bez przepełnienia poziomego, pełna wysokość osadzonego koszyka, tylko wolne/zajęte, brak linku Bileter w sklepie; działa /bileter.
