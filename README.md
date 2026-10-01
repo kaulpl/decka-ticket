@@ -1,10 +1,10 @@
-# Decka Bilety 0.3.1
+# Decka Bilety 0.3.2
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
-1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.1.zip`. Aktywuj wtyczkę.
+1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.2.zip`. Aktywuj wtyczkę.
 2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
 3. Utwórz stronę **Bilety** z blokiem Krótki kod: `[decka_bilety]`.
 4. Skaner działa pod adresem **/bileter** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
@@ -164,3 +164,11 @@ Wydanie ponawia aktualizację struktury bazy i sprawdza obecność wymaganych ko
 Jeśli zapis zamówienia zostanie odrzucony, klient otrzyma kod `DB-ORDERS-…`, `DB-INVENTORY-…` albo `DB-ITEMS-…`. Odpowiadający mu ostatni błąd (czas, etap, kategoria i nazwa pola, jeśli rozpoznana) znajduje się w sekcji Baza danych. Diagnoza jest zapisywana po wycofaniu transakcji, dzięki czemu nie znika razem z nieudanym zamówieniem. Nie zapisujemy w niej zapytania SQL, danych kibica ani sekretów Stripe. Nieudany zapis nie jest automatycznie ponawiany i nie rozpoczyna płatności.
 
 Brak kolumn można naprawić ponowną aktualizacją struktury. Brak uprawnień, dodatkowe wymagane kolumny, błędy kodowania lub ograniczenia hostingu wymagają działania na podstawie wskazanej kategorii. Nie należy zakładać, że sam komunikat zapisu oznacza błędne klucze Stripe. Zgłoszonego błędu konkretnego hostingu nie odtworzono na czystym MySQL; to wydanie dostarcza naprawę niepełnej migracji oraz diagnostykę potrzebną do dalszego ustalenia przyczyny.
+
+## Naprawa konfliktu unikatowego zapisu (0.3.2)
+
+Nowe zamówienie zapisuje brak sesji Stripe jako SQL NULL. Aktualizacja naprawia również starszą definicję pola `session_id` (NOT NULL lub domyślne puste ciągi) i zamienia wyłącznie puste identyfikatory sesji na NULL. Zachowuje zamówienia, bilety, niepuste identyfikatory Stripe i indeks unikatowy. Migracja uruchamia się po aktualizacji; można ją ponowić w Ustawienia → Baza danych.
+
+Diagnostyka konfliktu pokazuje teraz nazwę indeksu, bez wartości powodującej konflikt. Sam komunikat z wersji 0.3.1 nie wskazuje, który indeks zawiódł: naprawa dotyczy odtworzonego scenariusza pustej sesji, a jej skuteczność na hostingu wymaga ponowienia zakupu. Jeżeli błąd pozostaje, przekaż kod oraz pole „Indeks” z nowego wpisu. Nie usuwaj zamówień ani indeksów unikatowych.
+
+Poprawiono również formatowanie definicji tabel dla dbDelta: przecinki w domyślnym adresie hali nie są dzielone na osobne definicje kolumn.

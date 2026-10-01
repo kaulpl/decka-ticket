@@ -10,3 +10,4 @@ $errors=[
     ['', 'validation',''],
 ];
 foreach($errors as [$raw,$reason,$field]){$d=Decka_DB::diagnose('insert','orders',$raw);if($d['reason']!==$reason||$d['field']!==$field||str_contains(json_encode($d),'customer@')||str_contains(json_encode($d),'secret-'))throw new Exception('Invalid or sensitive diagnostic');echo "PASS $reason diagnostic without data\n";}
+foreach(["Duplicate entry 'private-buyer@example.test' for key 'wp_decka_orders.stripe_session'"=>'stripe_session',"Duplicate entry 'private-buyer@example.test' for key 'PRIMARY'"=>'PRIMARY',"Duplicate entry 'private-buyer@example.test' for key `request_once`"=>'request_once',"Duplicate entry 'private-buyer@example.test' for key 'unsafe@email.test'"=>''] as $raw=>$expected){$d=Decka_DB::diagnose('insert','orders',$raw);if($d['index']!==$expected||str_contains(json_encode($d),'@'))throw new Exception('Unsafe or incorrect index diagnostic');echo "PASS safe duplicate index $expected\n";}

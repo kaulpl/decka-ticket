@@ -3,14 +3,18 @@ final class Decka_DB_Error extends RuntimeException {
     public function __construct(public array $diagnostic) {parent::__construct('Nie udało się zapisać zamówienia. Kod: '.$diagnostic['reference'].'. Przekaż ten kod obsłudze klubu.');}
 }
 final class Decka_DB {
-    public const SCHEMA_VERSION='0.3.1';
+    public const SCHEMA_VERSION='0.3.2';
     private static int $transaction_depth=0;
     public static function diagnose(string $operation,string $table,string $error):array {
-        $reason='database';$field='';
+        $reason='database';$field='';$index='';
         if(preg_match("/Unknown column '([a-zA-Z0-9_]+)'/i",$error,$m)){$reason='missing_column';$field=$m[1];}
         elseif(preg_match("/Field '([a-zA-Z0-9_]+)' doesn't have a default/i",$error,$m)){$reason='required_field';$field=$m[1];}
         elseif(preg_match("/(?:too long for column|Column) '([a-zA-Z0-9_]+)'/i",$error,$m)){$reason=str_contains(strtolower($error),'cannot be null')?'null_field':'value_length';$field=$m[1];}
-        elseif(stripos($error,'Duplicate entry')!==false)$reason='duplicate';
+        elseif(stripos($error,'Duplicate entry')!==false){
+            $reason='duplicate';
+            // Read only the final index identifier, never the duplicate value (which may be personal data).
+            if(preg_match("/ for key ['`]([a-zA-Z0-9_]+\\.)?([a-zA-Z0-9_]{1,64})['`]\\s*$/i",$error,$m))$index=$m[2];
+        }
         elseif(stripos($error,"doesn't exist")!==false)$reason='missing_table';
         elseif(stripos($error,'denied')!==false||stripos($error,'read only')!==false)$reason='permissions';
         elseif(stripos($error,'deadlock')!==false||stripos($error,'lock wait')!==false)$reason='busy';
@@ -18,7 +22,7 @@ final class Decka_DB {
         elseif($error==='')$reason='validation';
         if(strlen($field)>64)$field='';
         $table=in_array($table,['orders','items','inventory','tickets','events','offers','promos','audit'],true)?$table:'query';
-        return ['reference'=>'DB-'.strtoupper($table).'-'.strtoupper(bin2hex(random_bytes(3))),'time'=>gmdate('c'),'operation'=>$operation,'table'=>$table,'reason'=>$reason,'field'=>$field];
+        return ['reference'=>'DB-'.strtoupper($table).'-'.strtoupper(bin2hex(random_bytes(3))),'time'=>gmdate('c'),'operation'=>$operation,'table'=>$table,'reason'=>$reason,'field'=>$field,'index'=>$index];
     }
     private static function remember(Decka_DB_Error $error):void {
         // Save after rollback: an option written inside the failed transaction would disappear.
@@ -58,7 +62,7 @@ final class Decka_DB {
         'tickets'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, order_id bigint unsigned NOT NULL, event_id bigint unsigned NOT NULL, seat_id varchar(16) NOT NULL, kind varchar(16) NOT NULL, nonce varchar(64) NOT NULL, status varchar(16) NOT NULL DEFAULT 'valid', used_at datetime DEFAULT NULL, used_by bigint unsigned DEFAULT NULL, PRIMARY KEY  (id), UNIQUE KEY issued_once (order_id,event_id,seat_id)",
         'audit'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, actor bigint unsigned NOT NULL, action varchar(40) NOT NULL, object_id bigint unsigned NOT NULL DEFAULT 0, detail text, created_at datetime NOT NULL, PRIMARY KEY  (id)"
         ];
-        foreach($schemas as $name=>$schema) dbDelta('CREATE TABLE '.self::table($name).' ('.str_replace(', ',",\n",$schema).") ENGINE=InnoDB $c;");
+        foreach($schemas as $name=>$schema) dbDelta('CREATE TABLE '.self::table($name).' ('.preg_replace("/'(?:''|[^'])*'(*SKIP)(*F)|, /",",\n",$schema).") ENGINE=InnoDB $c;");
         foreach(array_keys($schemas) as $name){$table=self::table($name);$row=$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',$table));if(!$row || strtoupper($row->Engine)!=='INNODB')throw new RuntimeException('Decka Bilety wymaga tabel InnoDB.');}
         // dbDelta's result describes intended changes; verify the actual columns before marking success.
         foreach($schemas as $name=>$schema){
@@ -66,6 +70,18 @@ final class Decka_DB {
             preg_match_all('/(?:^|, )([a-z_]+) (?:bigint|varchar|datetime|int|tinyint|text|longtext)\b/',$schema,$matches);
             if(!$columns||array_diff($matches[1],$columns))throw new RuntimeException('Brak wymaganych kolumn w tabeli biletowej '.$name.'. Sprawdź uprawnienia ALTER na hostingu.');
         }
+        // dbDelta does not reliably change nullability or DEFAULT NULL on an existing varchar.
+        // A legacy empty session default collides with stripe_session before Stripe is called.
+        $orders=self::table('orders');
+        $session=$wpdb->get_row("SHOW COLUMNS FROM $orders LIKE 'session_id'");
+        if(!$session)throw new RuntimeException('Brak pola sesji płatności.');
+        if($session->Null!=='YES'||$session->Default!==null){
+            self::query("ALTER TABLE $orders MODIFY COLUMN session_id varchar(190) NULL DEFAULT NULL");
+            $session=$wpdb->get_row("SHOW COLUMNS FROM $orders LIKE 'session_id'");
+            if(!$session||$session->Null!=='YES'||$session->Default!==null)throw new RuntimeException('Nie ukończono naprawy pola sesji płatności.');
+        }
+        // Empty strings are not Stripe session IDs. Preserve every nonempty ID and its unique index.
+        self::query("UPDATE $orders SET session_id=NULL WHERE session_id=''");
         add_role('decka_bileter','Bileter Decka',['read'=>true,'decka_scan'=>true]);
         if($a=get_role('administrator')){$a->add_cap('decka_scan');$a->add_cap('decka_manage');}
         add_option('decka_settings',['mode'=>'test','normal'=>2500,'reduced'=>1500,'league_url'=>'https://rozgrywki.pzkosz.pl/liga/1/druzyny/d/7625/decka-pelplin/terminarz.html','team_id'=>'7625','registration'=>1],'','no');
