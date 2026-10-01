@@ -1,10 +1,10 @@
-# Decka Bilety 0.3.2
+# Decka Bilety 0.3.3
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
-1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.2.zip`. Aktywuj wtyczkę.
+1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.3.zip`. Aktywuj wtyczkę.
 2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
 3. Utwórz stronę **Bilety** z blokiem Krótki kod: `[decka_bilety]`.
 4. Skaner działa pod adresem **/bileter** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
@@ -172,3 +172,15 @@ Nowe zamówienie zapisuje brak sesji Stripe jako SQL NULL. Aktualizacja naprawia
 Diagnostyka konfliktu pokazuje teraz nazwę indeksu, bez wartości powodującej konflikt. Sam komunikat z wersji 0.3.1 nie wskazuje, który indeks zawiódł: naprawa dotyczy odtworzonego scenariusza pustej sesji, a jej skuteczność na hostingu wymaga ponowienia zakupu. Jeżeli błąd pozostaje, przekaż kod oraz pole „Indeks” z nowego wpisu. Nie usuwaj zamówień ani indeksów unikatowych.
 
 Poprawiono również formatowanie definicji tabel dla dbDelta: przecinki w domyślnym adresie hali nie są dzielone na osobne definicje kolumn.
+
+## Baza dect_ i pełna kontrola zapisu (0.3.3)
+
+Wtyczka używa teraz własnych tabel `{prefiks WordPressa}dect_*` (np. `wp_dect_orders`). Aktualizacja tworzy osiem tabel na podstawie aktualnego schematu i jednorazowo przenosi wspólne kolumny z `{prefiks WordPressa}decka_*`. Nie kopiuje obcych pól, indeksów ani triggerów, w tym zgłoszonego `order_number`. Stare tabele i dodatkowe dane pozostają nienaruszone. Nie potwierdzono, z jakiej wtyczki pochodził ten indeks.
+
+Migracja zachowuje identyfikatory, kwoty, kody QR, sesje Stripe, rezerwacje, statusy oraz historię wejść. Porównuje liczbę i wartości kopiowanych rekordów. Wszystkie dane i znacznik przełączenia zatwierdza w jednej transakcji; błąd wycofuje kopiowanie, blokuje zakup i nie usuwa źródła. Nie nadpisuje niepustych tabel docelowych i nie powtarza kopiowania po udanym przełączeniu. Wymaga InnoDB również dla tabeli opcji WordPressa. Ustawienia i konta WordPressa pozostają bez zmiany nazw.
+
+Aktualizację wykonaj w oknie serwisowym, bez trwających żądań zakupu lub skanowania ze starej wersji PHP. Po przełączeniu starsza wersja wtyczki nie odczyta nowych transakcji z dect_; nie należy wracać do starego ZIP-a jako metody cofania danych. Stare tabele są archiwum, nie stale synchronizowaną kopią.
+
+Ustawienia → Baza danych pokazują aktywną przestrzeń, wynik migracji i kontrolę wszystkich ośmiu tabel: kolumny, typy, długości, NULL, wartości domyślne, AUTO_INCREMENT, InnoDB oraz indeksy unikatowe. Raport nie zawiera wierszy klientów ani wartości sekretów. Dodatkowe ograniczenia są zgłaszane bez automatycznego usuwania danych.
+
+Kontrolowany jest również zapis odpowiedzi Stripe, danych potwierdzonej płatności, biletów i znaczników wysyłki. Błąd bazy po płatności nie jest uznawany za powodzenie; webhook może ponowić próbę. Testy używają atrap Stripe i poczty — odbiór na hostingu i prawdziwa płatność pozostają osobnym sprawdzeniem.

@@ -32,10 +32,10 @@ final class Decka_Tickets {
         }return $pdf->Output('decka-bilety.pdf','S');
     }
     public static function email(int $id):void {
-        global $wpdb;$o=Decka_Service::order($id);if(!$o || $o->mail_sent_at)return;
-        $wpdb->query($wpdb->prepare('UPDATE '.Decka_DB::table('orders').' SET mail_attempts=mail_attempts+1 WHERE id=%d',$id));
+        global $wpdb;Decka_DB::require_storage();$o=Decka_Service::order($id);if(!$o || $o->mail_sent_at)return;
+        Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('orders').' SET mail_attempts=mail_attempts+1 WHERE id=%d',$id));
         $tmp=tempnam(sys_get_temp_dir(),'decka-');if(!$tmp)throw new RuntimeException('Brak katalogu tymczasowego dla PDF.');$file=$tmp.'.pdf';rename($tmp,$file);
-        try{if(file_put_contents($file,self::pdf($id))===false)throw new RuntimeException('Nie można zapisać PDF.');$sent=wp_mail($o->email,($o->mode==='test'?'[TEST] ':'').str_replace('{order}',(string)$id,(Decka_DB::settings()['mail_subject']??'')?:'Decka Pelplin — Twoje bilety').($o->status==='voucher'?' · VOUCHER':''),(Decka_DB::settings()['mail_body']??'W załączniku przesyłamy bilety. Pokaż kod QR przy wejściu na mecz. Do zobaczenia w hali!'),['Content-Type: text/plain; charset=UTF-8'],[$file]);if(!$sent)throw new RuntimeException('Wysyłka wiadomości nie powiodła się. Sprawdź SMTP.');$wpdb->update(Decka_DB::table('orders'),['mail_sent_at'=>gmdate('Y-m-d H:i:s'),'last_error'=>null],['id'=>$id]);}finally{if(file_exists($file))unlink($file);}
+        try{if(file_put_contents($file,self::pdf($id))===false)throw new RuntimeException('Nie można zapisać PDF.');$sent=wp_mail($o->email,($o->mode==='test'?'[TEST] ':'').str_replace('{order}',(string)$id,(Decka_DB::settings()['mail_subject']??'')?:'Decka Pelplin — Twoje bilety').($o->status==='voucher'?' · VOUCHER':''),(Decka_DB::settings()['mail_body']??'W załączniku przesyłamy bilety. Pokaż kod QR przy wejściu na mecz. Do zobaczenia w hali!'),['Content-Type: text/plain; charset=UTF-8'],[$file]);if(!$sent)throw new RuntimeException('Wysyłka wiadomości nie powiodła się. Sprawdź SMTP.');Decka_DB::update('orders',['mail_sent_at'=>gmdate('Y-m-d H:i:s'),'last_error'=>null],['id'=>$id]);}finally{if(file_exists($file))unlink($file);}
     }
     public static function download():void {
         $id=absint($_GET['order']??0);check_admin_referer('decka_pdf_'.$id);$o=Decka_Service::order($id);

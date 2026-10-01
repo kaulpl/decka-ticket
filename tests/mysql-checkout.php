@@ -65,3 +65,93 @@ Decka_DB::install();Decka_DB::install();decka_check((int)$wpdb->get_var("SELECT 
 
 $venue=$wpdb->get_row('SHOW COLUMNS FROM '.Decka_DB::table('events')." LIKE 'venue'");
 decka_check($venue->Default==='Hala ZKiW nr 1, Sambora 5A, Pelplin','migration preserves commas in quoted venue default');
+
+// Full checkout audit: paid settlement, issuance, package, voucher, and atomic failures.
+$settings=Decka_DB::settings();$settings['max_per_fan']=340;update_option('decka_settings',$settings);
+function decka_paid_session($id){$o=Decka_Service::order($id);return ['id'=>$o->session_id,'client_reference_id'=>(string)$id,'metadata'=>['decka_order'=>(string)$id],'livemode'=>false,'currency'=>'pln','amount_total'=>(int)$o->total,'payment_status'=>'paid','payment_intent'=>'pi_ci_'.$id];}
+Decka_Service::settle(decka_paid_session($o['order_id']),'test');Decka_Service::settle(decka_paid_session($o['order_id']),'test');
+decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('tickets').' WHERE order_id='.$o['order_id'])===1,'duplicate settlement issues exactly one ticket');
+$ticket=$wpdb->get_row('SELECT * FROM '.Decka_DB::table('tickets').' WHERE order_id='.$o['order_id']);$originalQr=Decka_Domain::token($ticket,wp_salt('secure_auth'));
+Decka_DB::update('events',['gate_open'=>gmdate('Y-m-d H:i:s',time()-3600),'gate_close'=>gmdate('Y-m-d H:i:s',time()+3600)],['id'=>$event]);
+// Turn the populated installation into an older decka_ schema with foreign constraints.
+$tables=['events','offers','promos','orders','items','inventory','tickets','audit'];$snapshots=[];
+foreach($tables as $table){$current=Decka_DB::table($table);$snapshots[$table]=$wpdb->get_results("SELECT * FROM $current",ARRAY_A);Decka_DB::query("RENAME TABLE $current TO {$wpdb->prefix}decka_$table");}
+$oldOrders=$wpdb->prefix.'decka_orders';
+$wpdb->query("ALTER TABLE $oldOrders ADD COLUMN order_number varchar(50) NULL, ADD UNIQUE KEY order_number (order_number), ADD COLUMN legacy_required int NOT NULL");
+$wpdb->query("UPDATE $oldOrders SET order_number=CONCAT('OLD-',id)");$wpdb->query("UPDATE $oldOrders SET order_number='' WHERE id=$legacyId");$wpdb->query("ALTER TABLE $oldOrders MODIFY COLUMN order_number varchar(50) NOT NULL DEFAULT ''");
+$old=$wpdb->suppress_errors(true);$legacy['request_key']=bin2hex(random_bytes(16));$legacy['legacy_required']=0;
+$duplicate=$wpdb->insert($oldOrders,$legacy);$diagnosis=Decka_DB::diagnose('insert','orders',$wpdb->last_error);$wpdb->suppress_errors($old);
+decka_check($duplicate===false&&$diagnosis['index']==='order_number','reported legacy order_number conflict reproduced');
+delete_option('decka_storage_namespace');update_option('decka_schema_version','0.3.2');
+$blocked=false;try{Decka_DB::require_storage();}catch(RuntimeException $e){$blocked=true;}decka_check($blocked,'checkout blocked before complete migration');
+// Force a failure after events/orders copied, proving the entire migration rolls back.
+$legacyItems=$wpdb->prefix.'decka_items';$firstItem=$snapshots['items'][0];
+$wpdb->query("ALTER TABLE $legacyItems MODIFY COLUMN amount varchar(30) NOT NULL");
+$wpdb->update($legacyItems,['amount'=>'invalid-number'],['id'=>$firstItem['id']]);
+$old=$wpdb->suppress_errors(true);$migrationFailed=false;try{Decka_DB::install();}catch(RuntimeException $e){$migrationFailed=true;}$wpdb->suppress_errors($old);
+decka_check($migrationFailed&&get_option('decka_storage_namespace')!=='dect','failed migration never switches active namespace');
+foreach($tables as $t)decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table($t))===0,"failed migration rolls back $t");
+decka_check((int)$wpdb->get_var("SELECT COUNT(*) FROM $oldOrders")===count($snapshots['orders']),'failed migration leaves source intact');
+$wpdb->update($legacyItems,['amount'=>(string)$firstItem['amount']],['id'=>$firstItem['id']]);$wpdb->query("ALTER TABLE $legacyItems MODIFY COLUMN amount int NOT NULL");
+// Never merge into or replace an already-populated target without a committed marker.
+$wpdb->insert(Decka_DB::table('audit'),['actor'=>0,'action'=>'collision_fixture','created_at'=>gmdate('Y-m-d H:i:s')]);
+$refused=false;try{Decka_DB::install();}catch(RuntimeException $e){$refused=true;}
+decka_check($refused&&(int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('audit'))===1,'nonempty target preserved and migration refused');
+$wpdb->query('DELETE FROM '.Decka_DB::table('audit'));
+Decka_DB::install();$wpdb->flush();$wpdb->col_meta=[];
+decka_check(get_option('decka_storage_namespace')==='dect','migration activates dect namespace');
+foreach($tables as $table){
+    $rows=$wpdb->get_results('SELECT * FROM '.Decka_DB::table($table),ARRAY_A);
+    // Row order is not part of the database contract.
+    $sort=static function(&$rows){foreach($rows as &$r)ksort($r);unset($r);usort($rows,fn($a,$b)=>strcmp(json_encode($a),json_encode($b)));};$sort($rows);$sort($snapshots[$table]);
+    decka_check($rows===$snapshots[$table],"migration preserves every $table field and identifier");
+}
+decka_check($wpdb->get_row("SELECT order_number FROM $oldOrders WHERE id=$legacyId")->order_number===''&&(int)$wpdb->get_var("SELECT COUNT(*) FROM $oldOrders")===count($snapshots['orders']),'legacy tables and extra values preserved');
+$report=Decka_DB::inspect_schema();decka_check($report['ok'],'all new columns and unique indexes match contract');decka_check(!str_contains(json_encode($report),'ci@example.test')&&!str_contains(json_encode($report),'whsec_'),'schema report excludes customer and payment secrets');
+$columns=$wpdb->get_col('SHOW COLUMNS FROM '.Decka_DB::table('orders'));decka_check(!in_array('order_number',$columns,true)&&!in_array('legacy_required',$columns,true),'foreign columns and constraints not copied');
+decka_check(Decka_Tickets::scan($originalQr,$event)['valid'],'previously issued QR works after migration');
+$paid=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'seats'=>[['id'=>'70','kind'=>'reduced']]]);
+decka_check($paid['status']==='pending'&&$paid['order_id']>max(array_column($snapshots['orders'],'id')),'new order works with preserved auto increment');
+$voucher=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'email'=>'voucher@example.test','seats'=>[['id'=>'71','kind'=>'normal']]],true);
+decka_check($voucher['status']==='voucher'&&(int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('tickets').' WHERE order_id='.$voucher['order_id'])===1,'voucher writes order item inventory ticket and audit');
+$event2=Decka_DB::insert('events',['opponent'=>'Package match','starts_at'=>gmdate('Y-m-d H:i:s',time()+172800),'sale_open'=>1,'updated_at'=>gmdate('Y-m-d H:i:s')]);
+$offer=Decka_DB::insert('offers',['name'=>'CI package','event_ids'=>json_encode([$event,$event2]),'normal_price'=>4500,'reduced_price'=>2500,'active'=>1]);
+$package=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'offer_id'=>$offer,'package_ack'=>true,'seats'=>[['id'=>'72','kind'=>'normal']]]);
+Decka_Service::settle(decka_paid_session($package['order_id']),'test');
+decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('tickets').' WHERE order_id='.$package['order_id'])===2&&(int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('inventory').' WHERE order_id='.$package['order_id'])===2,'package writes a ticket and inventory for each match');
+// A later write must not leave an order or a partial seat reservation behind.
+$items=Decka_DB::table('items');$wpdb->query("ALTER TABLE $items ADD COLUMN unexpected_required int NOT NULL");
+$counts=[];foreach(['orders','items','inventory'] as $t)$counts[$t]=(int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table($t));
+$old=$wpdb->suppress_errors(true);$caught=null;
+try{Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'seats'=>[['id'=>'73','kind'=>'normal']]]);}catch(Decka_DB_Error $e){$caught=$e;}$wpdb->suppress_errors($old);
+decka_check($caught&&$caught->diagnostic['table']==='items','later item write failure has correct diagnosis');
+foreach($counts as $t=>$count)decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table($t))===$count,"item failure rolls back $t");
+$report=Decka_DB::inspect_schema();decka_check(!$report['ok']&&str_contains(implode(' ',$report['issues']),'unexpected_required'),'audit detects foreign required field in any table');$wpdb->query("ALTER TABLE $items DROP COLUMN unexpected_required");
+// An update failure on paid confirmation must not issue a ticket or acknowledge payment.
+$tickets=Decka_DB::table('tickets');$wpdb->query("ALTER TABLE $tickets ADD COLUMN unexpected_required int NOT NULL");
+$old=$wpdb->suppress_errors(true);$caught=null;try{Decka_Service::settle(decka_paid_session($paid['order_id']),'test');}catch(Decka_DB_Error $e){$caught=$e;}$wpdb->suppress_errors($old);
+$after=Decka_Service::order($paid['order_id']);decka_check($caught&&$after->status==='pending'&&$after->payment_id===null,'ticket failure rolls back payment data and status');$wpdb->query("ALTER TABLE $tickets DROP COLUMN unexpected_required");
+Decka_Service::settle(decka_paid_session($paid['order_id']),'test');decka_check(Decka_Service::order($paid['order_id'])->status==='paid','webhook retry completes after failed write');
+Decka_DB::install();decka_check(Decka_Service::order($paid['order_id'])->status==='paid','repeat installation never recopies stale legacy data');
+
+// Check failures in UPDATE as well as INSERT. Stripe has been called, so retain the
+// same creating order and reservation for an idempotent retry; never start a new order.
+$orders=Decka_DB::table('orders');$trigger=$wpdb->prefix.'dect_ci_update_failure';
+$wpdb->query("CREATE TRIGGER $trigger BEFORE UPDATE ON $orders FOR EACH ROW BEGIN IF NEW.status='pending' AND OLD.status='creating' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CI forced session update failure'; END IF; END");
+$key=bin2hex(random_bytes(16));$retryInput=['request_key'=>$key,'event_id'=>$event,'seats'=>[['id'=>'74','kind'=>'normal']]];
+$old=$wpdb->suppress_errors(true);$caught=null;try{Decka_Service::create($retryInput);}catch(Decka_DB_Error $e){$caught=$e;}$wpdb->suppress_errors($old);
+$creating=$wpdb->get_row($wpdb->prepare("SELECT * FROM $orders WHERE request_key=%s",$key));
+decka_check($caught&&$creating->status==='creating'&&$creating->session_id===null,'failed session update is reported and order remains recoverable');
+$wpdb->query("DROP TRIGGER $trigger");$resumed=Decka_Service::create($retryInput);decka_check($resumed['order_id']===(int)$creating->id&&$resumed['status']==='pending','same order resumes after session persistence failure');
+$wpdb->query("CREATE TRIGGER $trigger BEFORE UPDATE ON $orders FOR EACH ROW BEGIN IF NEW.payment_id IS NOT NULL AND OLD.payment_id IS NULL THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='CI forced payment update failure'; END IF; END");
+$old=$wpdb->suppress_errors(true);$caught=null;try{Decka_Service::settle(decka_paid_session($resumed['order_id']),'test');}catch(Decka_DB_Error $e){$caught=$e;}$wpdb->suppress_errors($old);
+decka_check($caught&&$caught->diagnostic['operation']==='update'&&Decka_Service::order($resumed['order_id'])->status==='pending'&&(int)$wpdb->get_var("SELECT COUNT(*) FROM $tickets WHERE order_id=".$resumed['order_id'])===0,'failed payment UPDATE never issues tickets or marks paid');
+$wpdb->query("DROP TRIGGER $trigger");Decka_Service::settle(decka_paid_session($resumed['order_id']),'test');decka_check(Decka_Service::order($resumed['order_id'])->status==='paid','payment confirmation retry succeeds');
+
+$audit=Decka_DB::table('audit');$wpdb->query("ALTER TABLE $audit ADD COLUMN unexpected_required int NOT NULL");
+$counts=[];foreach(['orders','items','inventory','tickets','audit'] as $t)$counts[$t]=(int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table($t));
+$old=$wpdb->suppress_errors(true);$caught=null;
+try{Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'email'=>'voucher@example.test','seats'=>[['id'=>'75','kind'=>'normal']]],true);}catch(Decka_DB_Error $e){$caught=$e;}$wpdb->suppress_errors($old);
+decka_check($caught&&$caught->diagnostic['table']==='audit','voucher audit failure is reported');
+foreach($counts as $t=>$count)decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table($t))===$count,"voucher audit failure rolls back $t");
+$wpdb->query("ALTER TABLE $audit DROP COLUMN unexpected_required");

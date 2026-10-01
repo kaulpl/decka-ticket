@@ -3,8 +3,9 @@ final class Decka_DB_Error extends RuntimeException {
     public function __construct(public array $diagnostic) {parent::__construct('Nie udało się zapisać zamówienia. Kod: '.$diagnostic['reference'].'. Przekaż ten kod obsłudze klubu.');}
 }
 final class Decka_DB {
-    public const SCHEMA_VERSION='0.3.2';
+    public const SCHEMA_VERSION='0.3.3';
     private static int $transaction_depth=0;
+    private static bool $installing=false;
     public static function diagnose(string $operation,string $table,string $error):array {
         $reason='database';$field='';$index='';
         if(preg_match("/Unknown column '([a-zA-Z0-9_]+)'/i",$error,$m)){$reason='missing_column';$field=$m[1];}
@@ -34,7 +35,7 @@ final class Decka_DB {
         if(self::$transaction_depth===0)self::remember($error);throw $error;
     }
     public static function maybe_upgrade():void {
-        if(get_option('decka_schema_version')===self::SCHEMA_VERSION)return;
+        if(get_option('decka_schema_version')===self::SCHEMA_VERSION&&get_option('decka_storage_namespace')==='dect')return;
         // A failed upgrade must not take down unrelated WordPress pages or run on every request.
         if(get_transient('decka_schema_retry'))return;
         set_transient('decka_schema_retry',1,300);
@@ -42,17 +43,24 @@ final class Decka_DB {
         catch(Throwable $e){update_option('decka_schema_error','Nie ukończono sprawdzenia struktury bazy. Otwórz Ustawienia → Baza danych i ponów weryfikację.',false);}
     }
 
-    public static function table(string $name): string {global $wpdb;return $wpdb->prefix.'decka_'.$name;}
-    public static function query(string $sql): int {global $wpdb;$r=$wpdb->query($sql);if($r===false)self::fail('query','query');return (int)$r;}
-    public static function insert(string $table,array $data): int {global $wpdb;if(false===$wpdb->insert(self::table($table),$data))self::fail('insert',$table);return (int)$wpdb->insert_id;}
+    public static function table(string $name): string {global $wpdb;return $wpdb->prefix.'dect_'.$name;}
+    public static function query(string $sql,string $table='query'): int {global $wpdb;self::require_storage();$r=$wpdb->query($sql);if($r===false)self::fail('query',$table);return (int)$r;}
+    public static function insert(string $table,array $data): int {global $wpdb;self::require_storage();if(false===$wpdb->insert(self::table($table),$data))self::fail('insert',$table);return (int)$wpdb->insert_id;}
+    public static function update(string $table,array $data,array $where):int {
+        global $wpdb;self::require_storage();$result=$wpdb->update(self::table($table),$data,$where);
+        if($result===false)self::fail('update',$table);return (int)$result;
+    }
+    public static function require_storage():void {
+        if(!self::$installing&&get_option('decka_storage_namespace')!=='dect')
+            throw new RuntimeException('Trwa aktualizacja bazy biletów. Spróbuj ponownie za chwilę. Administrator: Ustawienia → Baza danych.');
+    }
     public static function tx(callable $fn) {
         global $wpdb;self::query('START TRANSACTION');self::$transaction_depth++;
         try{$r=$fn();self::query('COMMIT');self::$transaction_depth--;return $r;}
         catch(Throwable $e){$wpdb->query('ROLLBACK');self::$transaction_depth--;if($e instanceof Decka_DB_Error)self::remember($e);throw $e;}
     }
-    public static function install(): void {
-        global $wpdb; require_once ABSPATH.'wp-admin/includes/upgrade.php';$c=$wpdb->get_charset_collate();
-        $schemas=[
+    private static function schemas():array {
+        return [
         'events'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, external_id varchar(100) DEFAULT NULL, opponent varchar(190) NOT NULL, starts_at datetime DEFAULT NULL, date_label varchar(80) NOT NULL DEFAULT '', venue varchar(190) NOT NULL DEFAULT 'Hala ZKiW nr 1, Sambora 5A, Pelplin', normal_price int DEFAULT NULL, reduced_price int DEFAULT NULL, image_id bigint unsigned DEFAULT NULL, sale_open tinyint NOT NULL DEFAULT 0, gate_open datetime DEFAULT NULL, gate_close datetime DEFAULT NULL, cancelled tinyint NOT NULL DEFAULT 0, source_url text, updated_at datetime NOT NULL, PRIMARY KEY  (id), UNIQUE KEY external_id (external_id)",
         'offers'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, name varchar(190) NOT NULL, event_ids text NOT NULL, normal_price int NOT NULL, reduced_price int NOT NULL, active tinyint NOT NULL DEFAULT 0, starts_at datetime DEFAULT NULL, ends_at datetime DEFAULT NULL, PRIMARY KEY  (id)",
         'promos'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, code varchar(64) NOT NULL, type varchar(20) NOT NULL, value int NOT NULL, max_uses int NOT NULL DEFAULT 0, event_ids text NOT NULL, starts_at datetime DEFAULT NULL, ends_at datetime DEFAULT NULL, active tinyint NOT NULL DEFAULT 1, PRIMARY KEY  (id), UNIQUE KEY code (code)",
@@ -62,6 +70,59 @@ final class Decka_DB {
         'tickets'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, order_id bigint unsigned NOT NULL, event_id bigint unsigned NOT NULL, seat_id varchar(16) NOT NULL, kind varchar(16) NOT NULL, nonce varchar(64) NOT NULL, status varchar(16) NOT NULL DEFAULT 'valid', used_at datetime DEFAULT NULL, used_by bigint unsigned DEFAULT NULL, PRIMARY KEY  (id), UNIQUE KEY issued_once (order_id,event_id,seat_id)",
         'audit'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, actor bigint unsigned NOT NULL, action varchar(40) NOT NULL, object_id bigint unsigned NOT NULL DEFAULT 0, detail text, created_at datetime NOT NULL, PRIMARY KEY  (id)"
         ];
+    }
+    public static function inspect_schema():array {
+        global $wpdb;$report=['checked_at'=>gmdate('c'),'tables'=>[],'issues'=>[]];
+        foreach(self::schemas() as $name=>$schema){
+            $table=self::table($name);$columns=$wpdb->get_results("SHOW COLUMNS FROM $table");
+            if(!$columns){$report['issues'][]="$name: brak tabeli lub uprawnień odczytu struktury";continue;}
+            preg_match_all('/(?:^|, )([a-z_]+) (?:bigint|varchar|datetime|int|tinyint|text|longtext)\b/',$schema,$matches);$expected=$matches[1];
+            $seen=[];$safe=[];$definitions=[];
+            foreach(preg_split("/'(?:''|[^'])*'(*SKIP)(*F)|, /",$schema) as $definition){if(preg_match('/^([a-z_]+) (.+)$/',$definition,$part))$definitions[$part[1]]=$part[2];}
+            foreach($columns as $c){
+                $seen[]=$c->Field;
+                $known=in_array($c->Field,$expected,true);
+                // Defaults can themselves contain private values; export only their category.
+                $safe[]=['name'=>$c->Field,'type'=>$c->Type,'nullable'=>$c->Null==='YES','default'=>$c->Default===null?'NULL/none':($c->Default===''?'empty':'set'),'extra'=>$c->Extra,'expected'=>$known];
+                if(!$known&&$c->Null!=='YES'&&$c->Default===null&&!preg_match('/auto_increment|generated/i',$c->Extra))$report['issues'][]="$name.$c->Field: dodatkowe wymagane pole bez wartości domyślnej";
+                if($known){
+                    $definition=$definitions[$c->Field];preg_match('/^([a-z]+(?:\(\d+\))?(?: unsigned)?)/',$definition,$type);
+                    $normalize=fn($t)=>preg_replace('/\b(bigint|int|tinyint)\(\d+\)/','$1',strtolower($t));
+                    if($normalize($c->Type)!==$normalize($type[1]))$report['issues'][]="$name.$c->Field: niezgodny typ lub długość pola";
+                    if(($c->Null==='NO')!==str_contains($definition,'NOT NULL'))$report['issues'][]="$name.$c->Field: niezgodna obsługa NULL";
+                    if(preg_match("/ DEFAULT ('(?:''|[^'])*'|NULL|[0-9]+)/",$definition,$default)){
+                        $value=$default[1]==='NULL'?null:trim($default[1],"'");
+                        if($c->Default!==null?(string)$c->Default!==$value:$value!==null)$report['issues'][]="$name.$c->Field: niezgodna wartość domyślna";
+                    }
+                }
+                if($c->Field==='id'&&$known&&!str_contains(strtolower($c->Extra),'auto_increment'))$report['issues'][]="$name.id: brak AUTO_INCREMENT";
+            }
+            foreach(array_diff($expected,$seen) as $missing)$report['issues'][]="$name.$missing: brak wymaganej kolumny";
+            $raw=$wpdb->get_results("SHOW INDEX FROM $table");$indices=[];
+            foreach($raw?:[] as $i){$indices[$i->Key_name]['unique']=!(int)$i->Non_unique;$indices[$i->Key_name]['columns'][(int)$i->Seq_in_index]=['name'=>$i->Column_name,'prefix'=>$i->Sub_part];}
+            preg_match_all('/(PRIMARY KEY  |UNIQUE KEY ([a-z_]+) )\(([^)]+)\)/',$schema,$keys,PREG_SET_ORDER);$expectedKeys=[];
+            foreach($keys as $k){$key=$k[2]?:'PRIMARY';$expectedKeys[]=$key;$actual=$indices[$key]??null;$cols=$actual?array_values($actual['columns']):[];
+                if(!$actual||!$actual['unique']||array_column($cols,'name')!==explode(',',$k[3])||array_filter(array_column($cols,'prefix')))$report['issues'][]="$name.$key: brak lub niezgodna definicja indeksu unikatowego";
+            }
+            foreach($indices as $key=>$index)if($index['unique']&&!in_array($key,$expectedKeys,true)){
+                $cols=array_values($index['columns']);
+                $report['issues'][]="$name.$key: dodatkowy indeks unikatowy — wymaga sprawdzenia";
+            }
+            $engine=$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',$table));
+            if(!$engine||strtoupper($engine->Engine)!=='INNODB')$report['issues'][]="$name: wymagany silnik InnoDB";
+            $report['tables'][$name]=['columns'=>$safe,'indexes'=>$indices,'engine'=>$engine->Engine??'unknown'];
+        }
+        $report['ok']=!$report['issues'];return $report;
+    }
+    public static function install():void {
+        global $wpdb;$lock='dect_schema_'.substr(hash('sha256',$wpdb->prefix),0,24);
+        if(!(int)$wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,10)',$lock)))throw new RuntimeException('Aktualizacja bazy już trwa. Spróbuj ponownie za chwilę.');
+        self::$installing=true;
+        try{self::install_locked();}finally{self::$installing=false;$wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)',$lock));}
+    }
+    private static function install_locked():void {
+        global $wpdb; require_once ABSPATH.'wp-admin/includes/upgrade.php';$c=$wpdb->get_charset_collate();
+        $schemas=self::schemas();
         foreach($schemas as $name=>$schema) dbDelta('CREATE TABLE '.self::table($name).' ('.preg_replace("/'(?:''|[^'])*'(*SKIP)(*F)|, /",",\n",$schema).") ENGINE=InnoDB $c;");
         foreach(array_keys($schemas) as $name){$table=self::table($name);$row=$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',$table));if(!$row || strtoupper($row->Engine)!=='INNODB')throw new RuntimeException('Decka Bilety wymaga tabel InnoDB.');}
         // dbDelta's result describes intended changes; verify the actual columns before marking success.
@@ -82,11 +143,65 @@ final class Decka_DB {
         }
         // Empty strings are not Stripe session IDs. Preserve every nonempty ID and its unique index.
         self::query("UPDATE $orders SET session_id=NULL WHERE session_id=''");
+        $report=self::inspect_schema();update_option('decka_schema_audit',$report,false);
+        if(!$report['ok'])throw new RuntimeException('Struktura bazy wymaga sprawdzenia: '.implode('; ',$report['issues']));
+        self::migrate_legacy();
         add_role('decka_bileter','Bileter Decka',['read'=>true,'decka_scan'=>true]);
         if($a=get_role('administrator')){$a->add_cap('decka_scan');$a->add_cap('decka_manage');}
         add_option('decka_settings',['mode'=>'test','normal'=>2500,'reduced'=>1500,'league_url'=>'https://rozgrywki.pzkosz.pl/liga/1/druzyny/d/7625/decka-pelplin/terminarz.html','team_id'=>'7625','registration'=>1],'','no');
         update_option('decka_schema_version',self::SCHEMA_VERSION,false);
         if(!wp_next_scheduled('decka_maintenance'))wp_schedule_event(time()+60,'decka_minute','decka_maintenance');
+    }
+    private static function migrate_legacy():void {
+        global $wpdb;
+        // Read the marker directly under the migration lock, avoiding another request's stale option cache.
+        $marker=$wpdb->get_var("SELECT option_value FROM {$wpdb->options} WHERE option_name='decka_storage_namespace'");
+        if($marker==='dect')return;
+        $optionEngine=$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',$wpdb->options));
+        if(!$optionEngine||strtoupper($optionEngine->Engine)!=='INNODB')throw new RuntimeException('Tabela opcji WordPressa wymaga InnoDB do bezpiecznej migracji.');
+        $names=array_keys(self::schemas());$sources=[];
+        foreach($names as $name){
+            $source=$wpdb->prefix.'decka_'.$name;
+            $exists=$wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s',$wpdb->esc_like($source)));
+            if($exists){
+                $engine=$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',$source));
+                if(!$engine||strtoupper($engine->Engine)!=='INNODB')throw new RuntimeException('Stara tabela '.$name.' wymaga InnoDB przed migracją.');
+                $sources[$name]=$source;
+            }
+        }
+        if($sources&&count($sources)!==count($names))throw new RuntimeException('Niekompletny zestaw starych tabel. Migracja przerwana bez usuwania danych.');
+        // Pre-create the option outside the data transaction, then change it atomically with all copied rows.
+        add_option('decka_storage_namespace','pending','','no');
+        $counts=[];
+        self::tx(function()use($wpdb,$names,$sources,&$counts){
+            foreach($names as $name){
+                $target=self::table($name);
+                if((int)$wpdb->get_var("SELECT COUNT(*) FROM $target"))throw new RuntimeException('Docelowa tabela '.$name.' nie jest pusta. Migracja nie nadpisuje istniejących danych.');
+            }
+            foreach($sources as $name=>$source){
+                $target=self::table($name);$sourceColumns=$wpdb->get_col("SHOW COLUMNS FROM $source");$targetColumns=$wpdb->get_results("SHOW COLUMNS FROM $target");$common=[];
+                foreach($targetColumns as $c){
+                    if(in_array($c->Field,$sourceColumns,true))$common[]=$c->Field;
+                    elseif($c->Field==='id'||($c->Null!=='YES'&&$c->Default===null))throw new RuntimeException('Brak wymaganej kolumny źródłowej '.$name.'.'.$c->Field.'.');
+                }
+                // Lock source rows until the complete copy commits. Copy data only, never legacy indexes/triggers.
+                self::query("SELECT * FROM $source FOR UPDATE",$name);
+                $quoted=implode(',',array_map(fn($c)=>'`'.$c.'`',$common));
+                self::query("INSERT INTO $target ($quoted) SELECT $quoted FROM $source",$name);
+                if($wpdb->get_results('SHOW WARNINGS'))throw new RuntimeException('Konwersja danych w tabeli '.$name.' wymaga sprawdzenia. Migracja została wycofana.');
+                $primary=$name==='inventory'?['mode','event_id','seat_id']:['id'];
+                $join=implode(' AND ',array_map(fn($c)=>"s.`$c`=t.`$c`",$primary));
+                $same=implode(' AND ',array_map(fn($c)=>"s.`$c` <=> t.`$c`",$common));
+                if((int)$wpdb->get_var("SELECT COUNT(*) FROM $source s JOIN $target t ON $join WHERE NOT ($same)"))throw new RuntimeException('Niezgodność danych podczas migracji '.$name.'.');
+                $sourceCount=(int)$wpdb->get_var("SELECT COUNT(*) FROM $source");$targetCount=(int)$wpdb->get_var("SELECT COUNT(*) FROM $target");
+                if($sourceCount!==$targetCount)throw new RuntimeException('Niezgodna liczba rekordów podczas migracji '.$name.'.');
+                $counts[$name]=$targetCount;
+            }
+            // Keep this marker in the same InnoDB transaction as the data. Never cache it before COMMIT.
+            if($wpdb->query("UPDATE {$wpdb->options} SET option_value='dect' WHERE option_name='decka_storage_namespace'")!==1)throw new RuntimeException('Nie można zatwierdzić migracji bazy.');
+        });
+        wp_cache_delete('decka_storage_namespace','options');wp_cache_delete('alloptions','options');wp_cache_delete('notoptions','options');
+        update_option('decka_storage_migration',['completed_at'=>gmdate('c'),'source'=>'decka_','target'=>'dect_','rows'=>$counts,'legacy_preserved'=>true],false);
     }
     public static function audit(string $action,int $id,string $detail=''):void {self::insert('audit',['actor'=>get_current_user_id(),'action'=>$action,'object_id'=>$id,'detail'=>$detail,'created_at'=>gmdate('Y-m-d H:i:s')]);}
     public static function settings():array{return (array)get_option('decka_settings',[]);}
