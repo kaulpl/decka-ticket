@@ -62,7 +62,7 @@ final class Decka_DB {
         'tickets'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, order_id bigint unsigned NOT NULL, event_id bigint unsigned NOT NULL, seat_id varchar(16) NOT NULL, kind varchar(16) NOT NULL, nonce varchar(64) NOT NULL, status varchar(16) NOT NULL DEFAULT 'valid', used_at datetime DEFAULT NULL, used_by bigint unsigned DEFAULT NULL, PRIMARY KEY  (id), UNIQUE KEY issued_once (order_id,event_id,seat_id)",
         'audit'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, actor bigint unsigned NOT NULL, action varchar(40) NOT NULL, object_id bigint unsigned NOT NULL DEFAULT 0, detail text, created_at datetime NOT NULL, PRIMARY KEY  (id)"
         ];
-        foreach($schemas as $name=>$schema) dbDelta('CREATE TABLE '.self::table($name).' ('.str_replace(', ',",\n",$schema).") ENGINE=InnoDB $c;");
+        foreach($schemas as $name=>$schema) dbDelta('CREATE TABLE '.self::table($name).' ('.preg_replace("/'(?:''|[^'])*'(*SKIP)(*F)|, /",",\n",$schema).") ENGINE=InnoDB $c;");
         foreach(array_keys($schemas) as $name){$table=self::table($name);$row=$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',$table));if(!$row || strtoupper($row->Engine)!=='INNODB')throw new RuntimeException('Decka Bilety wymaga tabel InnoDB.');}
         // dbDelta's result describes intended changes; verify the actual columns before marking success.
         foreach($schemas as $name=>$schema){

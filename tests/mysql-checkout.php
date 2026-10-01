@@ -56,8 +56,12 @@ $before=(int)$wpdb->get_var("SELECT COUNT(*) FROM $orders");
 $retry=Decka_Service::create($input);decka_check($retry['order_id']===$fixed['order_id']&&(int)$wpdb->get_var("SELECT COUNT(*) FROM $orders")===$before,'repeat click reuses order without duplicate insert');
 // Explicit NULL also protects new checkouts if a nullable empty default reappears.
 Decka_DB::query("ALTER TABLE $orders ALTER COLUMN session_id SET DEFAULT ''");
+decka_check($wpdb->update($orders,['session_id'=>''],['id'=>$legacyId])===1,'empty default collision fixture restored');
 $next=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'seats'=>[['id'=>'69','kind'=>'normal']]]);
 decka_check($next['status']==='pending','checkout explicitly writes NULL independently of default');
 $old=$wpdb->suppress_errors(true);$blocked=$wpdb->update($orders,['session_id'=>'cs_test_'.$o['order_id']],['id'=>$next['order_id']]);$wpdb->suppress_errors($old);
 decka_check($blocked===false,'real Stripe session uniqueness still enforced');
 Decka_DB::install();Decka_DB::install();decka_check((int)$wpdb->get_var("SELECT COUNT(*) FROM $orders")===$before+1,'repair is repeatable and preserves orders');
+
+$venue=$wpdb->get_row('SHOW COLUMNS FROM '.Decka_DB::table('events')." LIKE 'venue'");
+decka_check($venue->Default==='Hala ZKiW nr 1, Sambora 5A, Pelplin','migration preserves commas in quoted venue default');

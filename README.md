@@ -157,7 +157,7 @@ Przyciski portfeli są dostępne przy opłaconych biletach na koncie kibica po k
 **iOS:** poprawiono wysokość osadzenia (pełny koszyk), ścieżki czcionek i dodano pełnoekranowy link awaryjny. Widok działa w lokalnym mobilnym WebKit. Całkowicie pustego widoku na publicznej stronie nie udało się odtworzyć; wymagany odbiór na zgłoszonym fizycznym iPhonie. Test WebKit nie zastępuje testu aparatu i uprawnień na urządzeniu.
 
 
-## Błąd zapisu przy przejściu do płatności (0.3.2)
+## Błąd zapisu przy przejściu do płatności (0.3.1)
 
 Wydanie ponawia aktualizację struktury bazy i sprawdza obecność wymaganych kolumn przed oznaczeniem jej jako ukończonej. Nie usuwa zamówień ani biletów. W Ustawieniach dodano sekcję **Baza danych** i przycisk **Sprawdź i uzupełnij strukturę bazy**.
 
@@ -170,3 +170,5 @@ Brak kolumn można naprawić ponowną aktualizacją struktury. Brak uprawnień, 
 Nowe zamówienie zapisuje brak sesji Stripe jako SQL NULL. Aktualizacja naprawia również starszą definicję pola `session_id` (NOT NULL lub domyślne puste ciągi) i zamienia wyłącznie puste identyfikatory sesji na NULL. Zachowuje zamówienia, bilety, niepuste identyfikatory Stripe i indeks unikatowy. Migracja uruchamia się po aktualizacji; można ją ponowić w Ustawienia → Baza danych.
 
 Diagnostyka konfliktu pokazuje teraz nazwę indeksu, bez wartości powodującej konflikt. Sam komunikat z wersji 0.3.1 nie wskazuje, który indeks zawiódł: naprawa dotyczy odtworzonego scenariusza pustej sesji, a jej skuteczność na hostingu wymaga ponowienia zakupu. Jeżeli błąd pozostaje, przekaż kod oraz pole „Indeks” z nowego wpisu. Nie usuwaj zamówień ani indeksów unikatowych.
+
+Poprawiono również formatowanie definicji tabel dla dbDelta: przecinki w domyślnym adresie hali nie są dzielone na osobne definicje kolumn.
