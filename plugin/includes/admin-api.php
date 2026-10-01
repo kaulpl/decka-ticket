@@ -135,6 +135,6 @@ final class Decka_Admin_API {
         }elseif($op==='database_repair'){Decka_DB::install();delete_option('decka_schema_error');delete_transient('decka_schema_retry');$message='Struktura bazy została sprawdzona i uzupełniona. Istniejące bilety i zamówienia zostały zachowane.';
         }elseif($op==='maintenance'){Decka_Service::maintenance();$message='Uruchomiono sprawdzanie płatności i kolejki e-mail.';
         }else throw new RuntimeException('Nieznana operacja.');
-        $detail=in_array($op,['seat_block','seat_release'],true)?wp_json_encode(['mode'=>Decka_DB::mode(),'seats'=>$p['seats'],'reason'=>sanitize_text_field($p['reason']??'')]):Decka_DB::mode();Decka_DB::audit('admin_'.$op,$id,$detail);return ['ok'=>true,'id'=>$id,'message'=>$message];
+        $detail=in_array($op,['seat_block','seat_release'],true)?wp_json_encode(['mode'=>Decka_DB::mode(),'seats'=>$p['seats'],'reason'=>sanitize_text_field($p['reason']??'')]):Decka_DB::mode();if($op!=='database_inspect'&&get_option('decka_storage_namespace')==='dect')Decka_DB::audit('admin_'.$op,$id,$detail);return ['ok'=>true,'id'=>$id,'message'=>$message];
     }
 }
