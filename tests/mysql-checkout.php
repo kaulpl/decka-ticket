@@ -90,6 +90,7 @@ $wpdb->query("ALTER TABLE $legacyItems MODIFY COLUMN amount varchar(30) NOT NULL
 $wpdb->update($legacyItems,['amount'=>'invalid-number'],['id'=>$firstItem['id']]);
 $old=$wpdb->suppress_errors(true);$migrationFailed=false;try{Decka_DB::install();}catch(RuntimeException $e){$migrationFailed=true;}$wpdb->suppress_errors($old);
 decka_check($migrationFailed&&get_option('decka_storage_namespace')!=='dect','failed migration never switches active namespace');
+$inspection=Decka_Admin_API::action(['operation'=>'database_inspect']);decka_check($inspection['ok']&&is_array(get_option('decka_schema_audit')),'admin inspection works before migration without writing to blocked audit table');
 foreach($tables as $t)decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table($t))===0,"failed migration rolls back $t");
 decka_check((int)$wpdb->get_var("SELECT COUNT(*) FROM $oldOrders")===count($snapshots['orders']),'failed migration leaves source intact');
 $wpdb->update($legacyItems,['amount'=>(string)$firstItem['amount']],['id'=>$firstItem['id']]);$wpdb->query("ALTER TABLE $legacyItems MODIFY COLUMN amount int NOT NULL");
@@ -154,4 +155,10 @@ $old=$wpdb->suppress_errors(true);$caught=null;
 try{Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'email'=>'voucher@example.test','seats'=>[['id'=>'75','kind'=>'normal']]],true);}catch(Decka_DB_Error $e){$caught=$e;}$wpdb->suppress_errors($old);
 decka_check($caught&&$caught->diagnostic['table']==='audit','voucher audit failure is reported');
 foreach($counts as $t=>$count)decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table($t))===$count,"voucher audit failure rolls back $t");
+$wpdb->query("ALTER TABLE $audit DROP COLUMN unexpected_required");
+
+// Inspection must remain available even if the audit table itself is broken.
+$wpdb->query("ALTER TABLE $audit ADD COLUMN unexpected_required int NOT NULL");
+$inspection=Decka_Admin_API::action(['operation'=>'database_inspect']);
+decka_check($inspection['ok']&&!get_option('decka_schema_audit')['ok'],'inspection reports broken audit table without trying to write into it');
 $wpdb->query("ALTER TABLE $audit DROP COLUMN unexpected_required");

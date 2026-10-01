@@ -52,7 +52,7 @@ final class Decka_DB {
     }
     public static function require_storage():void {
         if(!self::$installing&&get_option('decka_storage_namespace')!=='dect')
-            throw new RuntimeException('Trwa aktualizacja bazy biletów. Spróbuj ponownie za chwilę. Administrator: Ustawienia → Baza danych.');
+            throw new RuntimeException('Baza biletów nie została jeszcze przełączona na dect_. Administrator: Ustawienia → Baza danych → Sprawdź i uzupełnij strukturę bazy.');
     }
     public static function tx(callable $fn) {
         global $wpdb;self::query('START TRANSACTION');self::$transaction_depth++;

@@ -1,10 +1,10 @@
-# Decka Bilety 0.3.3
+# Decka Bilety 0.3.4
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
-1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.3.zip`. Aktywuj wtyczkę.
+1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.4.zip`. Aktywuj wtyczkę.
 2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
 3. Utwórz stronę **Bilety** z blokiem Krótki kod: `[decka_bilety]`.
 4. Skaner działa pod adresem **/bileter** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
@@ -184,3 +184,9 @@ Aktualizację wykonaj w oknie serwisowym, bez trwających żądań zakupu lub sk
 Ustawienia → Baza danych pokazują aktywną przestrzeń, wynik migracji i kontrolę wszystkich ośmiu tabel: kolumny, typy, długości, NULL, wartości domyślne, AUTO_INCREMENT, InnoDB oraz indeksy unikatowe. Raport nie zawiera wierszy klientów ani wartości sekretów. Dodatkowe ograniczenia są zgłaszane bez automatycznego usuwania danych.
 
 Kontrolowany jest również zapis odpowiedzi Stripe, danych potwierdzonej płatności, biletów i znaczników wysyłki. Błąd bazy po płatności nie jest uznawany za powodzenie; webhook może ponowić próbę. Testy używają atrap Stripe i poczty — odbiór na hostingu i prawdziwa płatność pozostają osobnym sprawdzeniem.
+
+## Dostęp do diagnostyki przed migracją (0.3.4)
+
+Przycisk „Sprawdź pełną strukturę” nie zapisuje historii w tabeli audit. Dzięki temu działa także przed zakończeniem migracji i przy uszkodzonej tabeli historii. Ustawienia można zapisać przed migracją bez próby zapisu do jeszcze zablokowanych tabel. Komunikat blokady informuje o nieukończonym przełączeniu, zamiast sugerować, że migracja cały czas trwa.
+
+Kontrola struktury jest odczytem; nie wykonuje migracji. Aby ponowić migrację i zobaczyć konkretny powód jej niepowodzenia, użyj „Sprawdź i uzupełnij strukturę bazy”.
