@@ -41,9 +41,40 @@ jobs:
         with:
           name: decka-bilety
           path: dist/
+  mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: decka-ci-only
+          MYSQL_DATABASE: decka_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pdecka-ci-only"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mysqli, mbstring, gd, zip, openssl
+          tools: wp-cli
+      - name: Test checkout with real WordPress and strict MySQL
+        env:
+          DECKA_CI_MYSQL: '1'
+        run: |
+          mkdir -p /tmp/decka-wp
+          wp core download --path=/tmp/decka-wp
+          wp config create --path=/tmp/decka-wp --dbname=decka_test --dbuser=root --dbpass=decka-ci-only --dbhost=127.0.0.1:3306
+          wp core install --path=/tmp/decka-wp --url=http://example.test --title=Decka-CI --admin_user=admin --admin_password=ci-only-password --admin_email=admin@example.test --skip-email
+          wp config set DISABLE_WP_CRON true --raw --path=/tmp/decka-wp
+          ln -s "$GITHUB_WORKSPACE/plugin" /tmp/decka-wp/wp-content/plugins/decka-bilety
+          wp plugin activate decka-bilety --path=/tmp/decka-wp
+          wp eval-file "$GITHUB_WORKSPACE/tests/mysql-checkout.php" --path=/tmp/decka-wp
   release:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: build
+    needs: [build, mysql]
     runs-on: ubuntu-latest
     permissions:
       contents: write
