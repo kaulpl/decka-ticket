@@ -4,7 +4,7 @@ final class Decka_DB_Error extends RuntimeException {
 }
 final class Decka_Migration_Error extends RuntimeException {}
 final class Decka_DB {
-    public const SCHEMA_VERSION='0.3.6';
+    public const SCHEMA_VERSION='0.4.0';
     private static int $transaction_depth=0;
     private static bool $installing=false;
     private static string $migration_step='start';
@@ -64,10 +64,10 @@ final class Decka_DB {
     }
     private static function schemas():array {
         return [
-        'events'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, external_id varchar(100) DEFAULT NULL, opponent varchar(190) NOT NULL, starts_at datetime DEFAULT NULL, date_label varchar(80) NOT NULL DEFAULT '', venue varchar(190) NOT NULL DEFAULT 'Hala ZKiW nr 1, Sambora 5A, Pelplin', normal_price int DEFAULT NULL, reduced_price int DEFAULT NULL, image_id bigint unsigned DEFAULT NULL, sale_open tinyint NOT NULL DEFAULT 0, gate_open datetime DEFAULT NULL, gate_close datetime DEFAULT NULL, cancelled tinyint NOT NULL DEFAULT 0, source_url text, updated_at datetime NOT NULL, PRIMARY KEY  (id), UNIQUE KEY external_id (external_id)",
+        'events'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, external_id varchar(100) DEFAULT NULL, opponent varchar(190) NOT NULL, starts_at datetime DEFAULT NULL, date_label varchar(80) NOT NULL DEFAULT '', venue varchar(190) NOT NULL DEFAULT 'Hala ZKiW nr 1, Sambora 5A, Pelplin', normal_price int DEFAULT NULL, reduced_price int DEFAULT NULL, image_id bigint unsigned DEFAULT NULL, sale_open tinyint NOT NULL DEFAULT 0, gate_open datetime DEFAULT NULL, gate_close datetime DEFAULT NULL, gate_manual tinyint NOT NULL DEFAULT 0, cancelled tinyint NOT NULL DEFAULT 0, source_url text, updated_at datetime NOT NULL, PRIMARY KEY  (id), UNIQUE KEY external_id (external_id)",
         'offers'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, name varchar(190) NOT NULL, event_ids text NOT NULL, normal_price int NOT NULL, reduced_price int NOT NULL, active tinyint NOT NULL DEFAULT 0, starts_at datetime DEFAULT NULL, ends_at datetime DEFAULT NULL, PRIMARY KEY  (id)",
         'promos'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, code varchar(64) NOT NULL, type varchar(20) NOT NULL, value int NOT NULL, max_uses int NOT NULL DEFAULT 0, event_ids text NOT NULL, starts_at datetime DEFAULT NULL, ends_at datetime DEFAULT NULL, active tinyint NOT NULL DEFAULT 1, PRIMARY KEY  (id), UNIQUE KEY code (code)",
-        'orders'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, mode varchar(4) NOT NULL, user_id bigint unsigned NOT NULL, request_key varchar(64) NOT NULL, email varchar(190) NOT NULL, status varchar(24) NOT NULL, total int NOT NULL, discount int NOT NULL DEFAULT 0, promo_id bigint unsigned DEFAULT NULL, offer_id bigint unsigned DEFAULT NULL, session_id varchar(190) DEFAULT NULL, payment_id varchar(190) DEFAULT NULL, checkout_url text, stripe_payload longtext, package_ack varchar(40) DEFAULT NULL, created_at datetime NOT NULL, paid_at datetime DEFAULT NULL, mail_sent_at datetime DEFAULT NULL, mail_attempts int NOT NULL DEFAULT 0, last_error text, PRIMARY KEY  (id), UNIQUE KEY request_once (mode,user_id,request_key), UNIQUE KEY stripe_session (session_id), KEY status (status), KEY payment_id (payment_id)",
+        'orders'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, mode varchar(4) NOT NULL, user_id bigint unsigned NOT NULL, request_key varchar(64) NOT NULL, email varchar(190) NOT NULL, guest_hash varchar(64) DEFAULT NULL, first_name varchar(100) DEFAULT NULL, last_name varchar(100) DEFAULT NULL, phone varchar(40) DEFAULT NULL, status varchar(24) NOT NULL, total int NOT NULL, discount int NOT NULL DEFAULT 0, promo_id bigint unsigned DEFAULT NULL, offer_id bigint unsigned DEFAULT NULL, session_id varchar(190) DEFAULT NULL, payment_id varchar(190) DEFAULT NULL, checkout_url text, stripe_payload longtext, package_ack varchar(40) DEFAULT NULL, created_at datetime NOT NULL, paid_at datetime DEFAULT NULL, mail_sent_at datetime DEFAULT NULL, mail_attempts int NOT NULL DEFAULT 0, last_error text, PRIMARY KEY  (id), UNIQUE KEY request_once (mode,user_id,request_key), UNIQUE KEY stripe_session (session_id), KEY status (status), KEY payment_id (payment_id), KEY guest_hash (guest_hash)",
         'items'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, order_id bigint unsigned NOT NULL, event_id bigint unsigned NOT NULL, seat_id varchar(16) NOT NULL, kind varchar(16) NOT NULL, amount int NOT NULL, PRIMARY KEY  (id), UNIQUE KEY order_seat (order_id,event_id,seat_id)",
         'inventory'=>"mode varchar(4) NOT NULL, event_id bigint unsigned NOT NULL, seat_id varchar(16) NOT NULL, order_id bigint unsigned NOT NULL, state varchar(16) NOT NULL, PRIMARY KEY  (mode,event_id,seat_id), KEY order_id (order_id)",
         'tickets'=>"id bigint unsigned NOT NULL AUTO_INCREMENT, order_id bigint unsigned NOT NULL, event_id bigint unsigned NOT NULL, seat_id varchar(16) NOT NULL, kind varchar(16) NOT NULL, nonce varchar(64) NOT NULL, status varchar(16) NOT NULL DEFAULT 'valid', used_at datetime DEFAULT NULL, used_by bigint unsigned DEFAULT NULL, PRIMARY KEY  (id), UNIQUE KEY issued_once (order_id,event_id,seat_id)",
@@ -157,6 +157,9 @@ final class Decka_DB {
     }
     private static function install_locked():void {
         global $wpdb; require_once ABSPATH.'wp-admin/includes/upgrade.php';$c=$wpdb->get_charset_collate();
+        $eventsTable=self::table('events');$oldErrors=$wpdb->suppress_errors(true);
+        $existingGate=$wpdb->get_results("SHOW COLUMNS FROM $eventsTable");$wpdb->suppress_errors($oldErrors);
+        $preserveGate=$existingGate&&!in_array('gate_manual',array_column($existingGate,'Field'),true);
         self::$migration_step='schema';self::$migration_table='';
         $schemas=self::schemas();
         dbDelta('CREATE TABLE '.self::table('state')." (name varchar(64) NOT NULL,\nvalue longtext NOT NULL,\nPRIMARY KEY  (name)) ENGINE=InnoDB $c;");
@@ -185,6 +188,7 @@ final class Decka_DB {
         self::$migration_step='validate_schema';
         $report=self::inspect_schema();update_option('decka_schema_audit',$report,false);
         if(!$report['ok'])throw new Decka_Migration_Error('Struktura bazy wymaga sprawdzenia: '.implode('; ',$report['issues']));
+        if($preserveGate)self::query("UPDATE $eventsTable SET gate_manual=1 WHERE gate_open IS NOT NULL OR gate_close IS NOT NULL");
         self::migrate_legacy();
         add_role('decka_bileter','Bileter Decka',['read'=>true,'decka_scan'=>true]);
         if($a=get_role('administrator')){$a->add_cap('decka_scan');$a->add_cap('decka_manage');}

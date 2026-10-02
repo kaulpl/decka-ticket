@@ -7,7 +7,8 @@ define('K_PATH_CACHE',__DIR__.'/artifacts/');@mkdir(K_PATH_CACHE,0777,true);
 $settings=['mode'=>'test','normal'=>2500,'reduced'=>1500];$uid=7;$checks=0;
 function get_option($name,$default=[]){global $settings;if($name==='decka_storage_namespace')return 'dect';return $settings;}
 function get_current_user_id(){global $uid;return $uid;}
-function wp_get_current_user(){return (object)['user_email'=>'kibic@example.test'];}
+function wp_get_current_user(){global $uid;return (object)['user_email'=>'kibic'.$uid.'@example.test'];}
+function home_url($path=''){return 'https://example.test'.$path;}
 function sanitize_text_field($v){return trim(strip_tags((string)$v));}
 function sanitize_email($v){return trim((string)$v);}
 function is_email($v){return filter_var($v,FILTER_VALIDATE_EMAIL);}
@@ -40,7 +41,7 @@ $schemas=[
 'events'=>'id INTEGER PRIMARY KEY,opponent TEXT,starts_at TEXT,sale_open INT,cancelled INT DEFAULT 0,gate_open TEXT,gate_close TEXT,venue TEXT,normal_price INT,reduced_price INT,image_id INT',
 'offers'=>'id INTEGER PRIMARY KEY,name TEXT,event_ids TEXT,normal_price INT,reduced_price INT,active INT,starts_at TEXT,ends_at TEXT',
 'promos'=>'id INTEGER PRIMARY KEY,code TEXT,type TEXT,value INT,max_uses INT,event_ids TEXT,active INT,starts_at TEXT,ends_at TEXT',
-'orders'=>'id INTEGER PRIMARY KEY AUTOINCREMENT,mode TEXT,user_id INT,request_key TEXT,email TEXT,status TEXT,total INT,discount INT,offer_id INT,promo_id INT,session_id TEXT,payment_id TEXT,checkout_url TEXT,stripe_payload TEXT,package_ack TEXT,created_at TEXT,paid_at TEXT,mail_sent_at TEXT,mail_attempts INT DEFAULT 0,last_error TEXT,UNIQUE(mode,user_id,request_key)',
+'orders'=>'id INTEGER PRIMARY KEY AUTOINCREMENT,mode TEXT,user_id INT,request_key TEXT,email TEXT,guest_hash TEXT,first_name TEXT,last_name TEXT,phone TEXT,status TEXT,total INT,discount INT,offer_id INT,promo_id INT,session_id TEXT,payment_id TEXT,checkout_url TEXT,stripe_payload TEXT,package_ack TEXT,created_at TEXT,paid_at TEXT,mail_sent_at TEXT,mail_attempts INT DEFAULT 0,last_error TEXT,UNIQUE(mode,user_id,request_key)',
 'items'=>'id INTEGER PRIMARY KEY AUTOINCREMENT,order_id INT,event_id INT,seat_id TEXT,kind TEXT,amount INT,UNIQUE(order_id,event_id,seat_id)',
 'inventory'=>'mode TEXT,event_id INT,seat_id TEXT,order_id INT,state TEXT,PRIMARY KEY(mode,event_id,seat_id)',
 'tickets'=>'id INTEGER PRIMARY KEY AUTOINCREMENT,order_id INT,event_id INT,seat_id TEXT,kind TEXT,nonce TEXT,status TEXT,used_at TEXT,used_by INT,UNIQUE(order_id,event_id,seat_id)',
@@ -98,6 +99,8 @@ $wpdb->query('UPDATE wp_dect_tickets SET status="revoked" WHERE order_id='.$pack
 $settings['max_per_fan']=1;$uid=100;buy(80);rejects(fn()=>buy(81),'limit kibica obejmuje wcześniejsze oczekujące zamówienie');rejects(fn()=>buy(82,1,['offer_id'=>1,'package_ack'=>true]),'limit obejmuje również zakup pakietu');$uid=101;check(buy(81)['status']==='pending','limit liczony osobno dla każdego kibica');
 $settings['max_per_fan']=10;$uid=102;$wpdb->query('UPDATE wp_dect_events SET normal_price=3100 WHERE id=2');check(buy(83,2)['total']===3100,'cena indywidualnego meczu');check(buy(84,1)['total']===2500,'cena jednego meczu nie zmienia drugiego');
 rejects(fn()=>buy(85,1,['offer_id'=>1]),'pakiet wymaga potwierdzenia informacji o terminach');$wpdb->query('UPDATE wp_dect_events SET starts_at=NULL,sale_open=0 WHERE id=3');check(buy(85,1,['offer_id'=>1,'package_ack'=>true])['total']===6500,'pakiet obejmuje mecz bez ustalonej daty');rejects(fn()=>buy(86,3),'pojedynczy mecz bez daty nie jest sprzedawany');
+function get_attached_file($id){return __DIR__.'/artifacts/match-reference.png';}
+if(file_exists(get_attached_file(1)))$wpdb->query('UPDATE wp_dect_events SET image_id=1');
 @mkdir(__DIR__.'/artifacts',0777,true);file_put_contents(__DIR__.'/artifacts/package-TEST.pdf',Decka_Tickets::pdf($pack['order_id']));
 $pdf=Decka_Tickets::pdf($voucher['order_id']);@mkdir(__DIR__.'/artifacts',0777,true);check(file_put_contents(__DIR__.'/artifacts/voucher-TEST.pdf',$pdf)!==false,'PDF zapisany do pliku');check(str_starts_with($pdf,'%PDF-'),'generowany rzeczywisty bilet PDF');
 file_put_contents(__DIR__.'/expected-qr.txt',Decka_Domain::token($wpdb->get_row('SELECT * FROM wp_dect_tickets WHERE order_id='.$voucher['order_id']),wp_salt('secure_auth')));

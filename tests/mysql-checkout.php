@@ -182,3 +182,40 @@ $wpdb->query("ALTER TABLE $audit ADD COLUMN unexpected_required int NOT NULL");
 $inspection=Decka_Admin_API::action(['operation'=>'database_inspect']);
 decka_check($inspection['ok']&&!get_option('decka_schema_audit')['ok'],'inspection reports broken audit table without trying to write into it');
 $wpdb->query("ALTER TABLE $audit DROP COLUMN unexpected_required");
+
+// Guest checkout: identity isolation, idempotency, payment gating and browser ownership.
+wp_set_current_user(0);$_COOKIE['decka_guest']=str_repeat('a',64);$guestHash=Decka_Guest::hash();
+$guestInput=['request_key'=>str_repeat('b',32),'event_id'=>$event,'seats'=>[['id'=>'250','kind'=>'normal']],'email'=>'guest-ci@example.test','first_name'=>'Jan','last_name'=>'Kowalski','phone'=>'+48 123 456 789'];
+$guest=Decka_Service::create($guestInput,false,$guestHash);$guestOrder=Decka_Service::order($guest['order_id']);
+decka_check((int)$guestOrder->user_id===0&&$guestOrder->first_name==='Jan','guest order stores buyer fields without creating an account');
+decka_check(Decka_Guest::owns($guestOrder),'guest cookie grants access to own order');
+decka_check(Decka_Service::create($guestInput,false,$guestHash)['order_id']===$guest['order_id'],'guest retry is idempotent');
+$sentBefore=(int)$guestOrder->mail_attempts;Decka_Tickets::email($guest['order_id']);
+decka_check((int)Decka_Service::order($guest['order_id'])->mail_attempts===$sentBefore&&!Decka_Service::order($guest['order_id'])->mail_sent_at,'pending payment never attempts ticket email');
+$nonce=wp_create_nonce('decka_auth');$_COOKIE['decka_guest']=str_repeat('c',64);
+decka_check(!Decka_Guest::owns($guestOrder)&&!wp_verify_nonce($nonce,'decka_auth'),'different guest cannot access order or reuse browser nonce');
+$otherInput=$guestInput;$otherInput['seats']=[['id'=>'251','kind'=>'normal']];$other=Decka_Service::create($otherInput,false,Decka_Guest::hash());
+decka_check($other['order_id']!==$guest['order_id'],'same client request key is isolated across guest sessions');
+decka_check(count(Decka_API::orders())===1&&(int)Decka_API::orders()[0]['id']===$other['order_id'],'guest orders endpoint exposes only current browser orders');
+$r=new WP_REST_Request('POST');$r->set_header('origin','https://attacker.test');$r->set_param('auth_nonce',wp_create_nonce('decka_auth'));$denied=false;try{Decka_Guest::checkout($r);}catch(RuntimeException $e){$denied=true;}decka_check($denied,'cross-origin guest checkout rejected');
+$_COOKIE['decka_guest']=str_repeat('a',64);Decka_Service::settle(decka_paid_session($guest['order_id']),'test');
+decka_check(Decka_Service::order($guest['order_id'])->status==='paid'&&count(Decka_Tickets::documents($guest['order_id']))===1,'guest ticket issued only after verified paid session');
+wp_set_current_user($uid);
+
+// Schedule sync sets a Warsaw-correct UTC entry window and keeps manual overrides.
+$leagueHtml='<table><tr><td>1</td><td><a href="/d/7625/decka/">Decka</a></td><td><a href="/mecz/987654/">Mecz</a></td><td>CI Guest</td><td>10.10.2027 18:00</td></tr></table>';
+$leagueFilter=function($pre,$args,$url)use(&$leagueHtml){if(str_contains($url,'rozgrywki.pzkosz.pl'))return ['response'=>['code'=>200],'body'=>$leagueHtml,'headers'=>[],'cookies'=>[]];return $pre;};
+add_filter('pre_http_request',$leagueFilter,5,3);$settings=Decka_DB::settings();$settings['league_url']='https://rozgrywki.pzkosz.pl/liga/1';$settings['team_id']='7625';update_option('decka_settings',$settings);
+Decka_League::sync();$synced=$wpdb->get_row('SELECT * FROM '.Decka_DB::table('events')." WHERE external_id='pzkosz-987654'");
+decka_check($synced->starts_at==='2027-10-10 16:00:00'&&$synced->gate_open==='2027-10-10 14:00:00'&&$synced->gate_close==='2027-10-10 18:00:00','synced entry window is two hours either side in UTC');
+$leagueHtml=str_replace('18:00','19:00',$leagueHtml);Decka_League::sync();$synced=$wpdb->get_row('SELECT * FROM '.Decka_DB::table('events').' WHERE id='.$synced->id);
+decka_check($synced->gate_open==='2027-10-10 15:00:00','automatic gate window tracks changed schedule');
+Decka_DB::update('events',['gate_manual'=>1,'gate_open'=>'2027-10-10 12:00:00','gate_close'=>'2027-10-10 23:00:00'],['id'=>$synced->id]);
+$leagueHtml=str_replace('19:00','20:00',$leagueHtml);Decka_League::sync();$synced=$wpdb->get_row('SELECT * FROM '.Decka_DB::table('events').' WHERE id='.$synced->id);
+decka_check($synced->gate_open==='2027-10-10 12:00:00'&&$synced->gate_close==='2027-10-10 23:00:00','manual entry window survives schedule sync');remove_filter('pre_http_request',$leagueFilter,5);
+
+$healthFilter=function($pre,$args,$url){if(str_contains($url,'api.stripe.com/v1/balance'))return ['response'=>['code'=>200],'body'=>'{"livemode":false}','headers'=>[],'cookies'=>[]];if(str_contains($url,'api.stripe.com/v1/webhook_endpoints'))return ['response'=>['code'=>200],'body'=>wp_json_encode(['data'=>[['url'=>rest_url('decka/v1/webhook/test'),'status'=>'enabled','enabled_events'=>['*']]]]),'headers'=>[],'cookies'=>[]];return $pre;};
+// The existing fake Stripe hook handles checkout only. Add health responses after it by replacing its branch guard.
+remove_all_filters('pre_http_request');add_filter('pre_http_request',$healthFilter,10,3);
+$health=Decka_Stripe::health();decka_check($health['ok']&&!$health['webhook_verified'],'Stripe health verifies saved mode and distinguishes unverified webhook signature');
+$settings=Decka_DB::settings();$settings['apple_wallet_enabled']=0;$settings['google_wallet_enabled']=0;update_option('decka_settings',$settings);decka_check(!Decka_Wallet::enabled('apple')&&!Decka_Wallet::enabled('google'),'wallet off switches disable both providers');

@@ -5,7 +5,8 @@ define('ABSPATH',sys_get_temp_dir().'/decka-updater-test/');
 @mkdir(ABSPATH.'wp-admin/includes',0777,true);file_put_contents(ABSPATH.'wp-admin/includes/plugin.php','<?php');file_put_contents(ABSPATH.'wp-admin/includes/file.php','<?php');
 $cache=[];$calls=0;$allowed=true;$cleaned=false;$updated=false;$http=[];$download='correct archive';$count=0;
 class WP_Error{function __construct(public $code,public $message){}}
-class Decka_DB{static function audit(...$a){}}
+class Decka_DB{static function storage_ready(){return true;}static function audit(...$a){}}
+function wp_nonce_url($url,$action){return $url.'&_wpnonce=test-nonce';}
 function plugin_basename($f){return $f;}function sanitize_textarea_field($s){return strip_tags($s);}function self_admin_url($s){return 'https://example.test/'.$s;}
 function get_site_transient($k){global $cache;return $cache[$k]??false;}function set_site_transient($k,$v,$ttl=0){global $cache;$cache[$k]=$v;}function delete_site_transient($k){global $cache;unset($cache[$k]);}
 function current_user_can($c){global $allowed;return $allowed;}function wp_clean_plugins_cache($clear){global $cleaned;$cleaned=$clear;delete_site_transient('update_plugins');}
@@ -24,7 +25,8 @@ ok(Decka_Updater::check(true)['status']==='no_release','empty repo reports no re
 $api='https://api.github.com/repos/kaulpl/decka-ticket/releases/latest';$http[$api]=['code'=>200,'body'=>json_encode($release)];$http[$manifestUrl]=['code'=>200,'body'=>json_encode($manifest)];
 ok(Decka_Updater::check(true)['status']==='available','new release available');$n=$calls;Decka_Updater::check();ok($calls===$n,'normal reads use release cache');
 $cache['unrelated_page_cache']='keep';$r=Decka_Updater::force();ok($cleaned&&$updated&&$calls===$n+2,'manual check clears and refetches immediately');ok(isset($cache['update_plugins']->response[DECKA_FILE]),'WordPress receives update');ok(isset($cache['update_plugins']->response['other/other.php']),'other plugin update retained');ok($cache['unrelated_page_cache']==='keep','page cache unchanged');
-$allowed=false;rejects(fn()=>Decka_Updater::force(),'requires update_plugins permission');$allowed=true;
+ok(str_contains($r['install_url'],'upgrade-plugin')&&str_contains($r['install_url'],'_wpnonce='),'installation link uses native WordPress upgrader and nonce');
+$allowed=false;ok(Decka_Updater::status()['install_url']===null,'installation link hidden without permission');rejects(fn()=>Decka_Updater::force(),'requires update_plugins permission');$allowed=true;
 rejects(fn()=>Decka_Updater::validate($release+['prerelease'=>true],$manifest),'rejects prerelease');rejects(fn()=>Decka_Updater::validate($release,array_merge($manifest,['version'=>'0.4.0'])),'rejects mismatch');rejects(fn()=>Decka_Updater::validate($release,array_merge($manifest,['sha256'=>'bad'])),'rejects missing checksum');rejects(fn()=>Decka_Updater::validate(array_merge($release,['assets'=>[]]),$manifest),'rejects source-only release');
 $bad=$release;$bad['assets'][0]['browser_download_url']='https://evil.example/file.zip';rejects(fn()=>Decka_Updater::validate($bad,$manifest),'rejects foreign asset');
 $f=Decka_Updater::download(false,$package,null,[]);ok(is_string($f)&&file_exists($f),'verified package accepted');unlink($f);$download='tampered';ok(Decka_Updater::download(false,$package,null,[]) instanceof WP_Error,'checksum mismatch blocks installation');ok(Decka_Updater::download(false,'https://example.test/other.zip',null,[])===false,'does not intercept unrelated plugins');

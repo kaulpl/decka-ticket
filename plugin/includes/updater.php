@@ -47,6 +47,7 @@ final class Decka_Updater {
     public static function status():array {
         $s=get_site_transient(self::CACHE);$s=is_array($s)?$s:['installed'=>DECKA_VERSION,'repository'=>self::REPO,'status'=>'unchecked','checked_at'=>null,'message'=>'Nie sprawdzono jeszcze repozytorium.'];
         $s['installed']=DECKA_VERSION;
+        $s['install_url']=current_user_can('update_plugins')&&($s['status']??'')==='available'?wp_nonce_url(self_admin_url('update.php?action=upgrade-plugin&plugin='.rawurlencode(self::file())),'upgrade-plugin_'.self::file()):null;
         $s['manage_url']=current_user_can('update_plugins')?self_admin_url('plugins.php'):null;
         return $s;
     }
@@ -62,7 +63,7 @@ final class Decka_Updater {
         $t->checked=(array)($t->checked??[]);$t->checked[$file]=DECKA_VERSION;$t->response=(array)($t->response??[]);$t->no_update=(array)($t->no_update??[]);unset($t->response[$file],$t->no_update[$file]);
         if($result['status']==='available')$t->response[$file]=(object)self::entry($result);
         elseif($result['status']==='current')$t->no_update[$file]=(object)self::entry($result);
-        set_site_transient('update_plugins',$t);Decka_DB::audit('update_check',0,$result['status']);
+        set_site_transient('update_plugins',$t);if(Decka_DB::storage_ready())Decka_DB::audit('update_check',0,$result['status']);
         return self::status()+['wordpress_check_requested'=>true];
     }
     private static function entry(array $s):array{return ['id'=>'https://github.com/'.self::REPO,'slug'=>'decka-bilety','plugin'=>self::file(),'version'=>$s['version'],'new_version'=>$s['version'],'url'=>$s['url'],'package'=>$s['package'],'requires'=>$s['requires'],'requires_php'=>$s['requires_php']];}

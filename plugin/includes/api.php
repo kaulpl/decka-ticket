@@ -1,7 +1,7 @@
 <?php
 final class Decka_API {
     private static function route(string $path,string $method,callable $fn,callable $permission):void {
-        register_rest_route('decka/v1',$path,['methods'=>$method,'permission_callback'=>$permission,'callback'=>function($r)use($fn,$path){try{if(!in_array($path??'',['/login','/register','/logout'],true)&&!Decka_DB::storage_ready())return new WP_Error('decka_maintenance','Sprzedaż biletów jest chwilowo niedostępna z powodu aktualizacji systemu. Spróbuj ponownie później.',['status'=>503]);return new WP_REST_Response($fn($r),200,['Cache-Control'=>'no-store, private']);}catch(Throwable $e){return new WP_Error('decka_error',$e->getMessage(),['status'=>400]);}}]);
+        register_rest_route('decka/v1',$path,['methods'=>$method,'permission_callback'=>$permission,'callback'=>function($r)use($fn,$path){try{if(!in_array($path??'',['/login','/register','/logout'],true)&&!Decka_DB::storage_ready())return new WP_Error('decka_maintenance','Sprzedaż biletów jest chwilowo niedostępna z powodu aktualizacji systemu. Spróbuj ponownie później.',['status'=>503]);return new WP_REST_Response($fn($r),200,['Cache-Control'=>'no-store, private']);}catch(Decka_Scan_Error $e){return new WP_REST_Response(['valid'=>false,'status'=>$e->status,'message'=>$e->getMessage()],200,['Cache-Control'=>'no-store, private']);}catch(Throwable $e){return new WP_Error('decka_error',$e->getMessage(),['status'=>400]);}}]);
     }
     public static function register():void {
         $public=fn()=>true;$user=fn()=>is_user_logged_in();$gate=fn()=>current_user_can('decka_scan');$admin=fn()=>current_user_can('decka_manage');
@@ -9,10 +9,10 @@ final class Decka_API {
         self::route('/availability','GET',fn($r)=>self::availability((string)$r->get_param('events')),$public);
         self::route('/login','POST',fn($r)=>self::auth($r,false),$public);
         self::route('/register','POST',fn($r)=>self::auth($r,true),$public);
-        self::route('/logout','POST',function(){wp_logout();return ['ok'=>true];},$user);
-        self::route('/checkout','POST',fn($r)=>Decka_Service::create($r->get_json_params()?:[]),$user);
-        self::route('/orders','GET',fn()=>self::orders(),$user);
-        self::route('/orders/(?P<id>\d+)/cancel','POST',function($r){$o=Decka_Service::order((int)$r['id']);if(!$o||(int)$o->user_id!==get_current_user_id())throw new RuntimeException('Brak dostępu.');if($o->status==='pending'&&$o->session_id){Decka_Stripe::request($o->mode,'POST','checkout/sessions/'.rawurlencode($o->session_id).'/expire');Decka_Service::settle(Decka_Stripe::request($o->mode,'GET','checkout/sessions/'.rawurlencode($o->session_id)),$o->mode);}return ['ok'=>true];},$user);
+        self::route('/logout','POST',function(){wp_logout();Decka_Guest::clear();return ['ok'=>true];},$user);
+        self::route('/checkout','POST',fn($r)=>Decka_Guest::checkout($r),$public);
+        self::route('/orders','GET',fn()=>self::orders(),fn()=>is_user_logged_in()||(bool)Decka_Guest::hash());
+        self::route('/orders/(?P<id>\d+)/cancel','POST',function($r){$o=Decka_Service::order((int)$r['id']);if(!$o||!Decka_Guest::owns($o))throw new RuntimeException('Brak dostępu.');if($o->status==='pending'&&$o->session_id){Decka_Stripe::request($o->mode,'POST','checkout/sessions/'.rawurlencode($o->session_id).'/expire');Decka_Service::settle(Decka_Stripe::request($o->mode,'GET','checkout/sessions/'.rawurlencode($o->session_id)),$o->mode);}return ['ok'=>true];},fn()=>is_user_logged_in()||(bool)Decka_Guest::hash());
         self::route('/gate/events','GET',function(){global $wpdb;return $wpdb->get_results('SELECT id,opponent,starts_at,gate_open,gate_close FROM '.Decka_DB::table('events').' WHERE cancelled=0 ORDER BY starts_at');},$gate);
         self::route('/gate/scan','POST',function($r){try{return Decka_Tickets::scan((string)$r->get_param('token'),(int)$r->get_param('event_id'));}catch(Throwable $e){Decka_DB::audit('scan_rejected',(int)$r->get_param('event_id'),wp_json_encode(['mode'=>Decka_DB::mode(),'reason'=>$e->getMessage()]));throw $e;}},$gate);
         self::route('/admin/voucher','POST',fn($r)=>Decka_Service::create($r->get_json_params()?:[],true),$admin);
@@ -40,12 +40,12 @@ final class Decka_API {
         if(is_wp_error($u))throw new RuntimeException('Nieprawidłowy e-mail lub hasło.');wp_set_current_user($u->ID);delete_transient($key);return self::config();
     }
     public static function orders():array {
-        global $wpdb;$rows=$wpdb->get_results($wpdb->prepare('SELECT id,status,mode,total,created_at,mail_sent_at,checkout_url FROM '.Decka_DB::table('orders').' WHERE user_id=%d ORDER BY id DESC LIMIT 100',get_current_user_id()),ARRAY_A);
+        global $wpdb;$rows=$wpdb->get_results($wpdb->prepare('SELECT id,status,mode,total,created_at,mail_sent_at,checkout_url FROM '.Decka_DB::table('orders').' WHERE user_id=%d AND (user_id<>0 OR guest_hash=%s) ORDER BY id DESC LIMIT 100',get_current_user_id(),Decka_Guest::hash()),ARRAY_A);
         foreach($rows as &$o){$o['download']=in_array($o['status'],['paid','free','voucher'],true)?add_query_arg('_wpnonce',wp_create_nonce('decka_pdf_'.$o['id']),admin_url('admin-post.php?action=decka_pdf&order='.$o['id'])):null;$o['wallet']=$o['download']?Decka_Wallet::links((int)$o['id']):[];$o['items']=$wpdb->get_results($wpdb->prepare('SELECT i.seat_id,i.kind,e.opponent,e.starts_at FROM '.Decka_DB::table('items').' i JOIN '.Decka_DB::table('events').' e ON e.id=i.event_id WHERE i.order_id=%d',$o['id']),ARRAY_A);}return $rows;
     }
     public static function webhook(WP_REST_Request $r):array {
         $mode=$r['mode'];$raw=$r->get_body();if(!Decka_Domain::signature($raw,(string)$r->get_header('stripe-signature'),Decka_Stripe::secret($mode,'webhook'),time()))throw new RuntimeException('Nieprawidłowy podpis Stripe.');
-        $event=json_decode($raw,true);if((bool)($event['livemode']??false)!==($mode==='live'))throw new RuntimeException('Nieprawidłowe środowisko Stripe.');$obj=$event['data']['object']??[];$type=$event['type']??'';
+        $event=json_decode($raw,true);if((bool)($event['livemode']??false)!==($mode==='live'))throw new RuntimeException('Nieprawidłowe środowisko Stripe.');update_option('decka_stripe_webhook_'.$mode,['time'=>gmdate('c'),'fingerprint'=>hash('sha256',Decka_Stripe::secret($mode,'webhook'))],false);$obj=$event['data']['object']??[];$type=$event['type']??'';
         if(in_array($type,['checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.expired','checkout.session.async_payment_failed'],true)){$s=Decka_Stripe::request($mode,'GET','checkout/sessions/'.rawurlencode($obj['id']));Decka_Service::settle($s,$mode);}
         if($type==='charge.refunded'||$type==='charge.dispute.created'){
             $charge=$type==='charge.refunded'?$obj:Decka_Stripe::request($mode,'GET','charges/'.rawurlencode($obj['charge']));
@@ -58,7 +58,7 @@ final class Decka_API {
         }
         return ['received'=>true];
     }
-    public static function config():array {return ['api'=>rest_url('decka/v1/'),'nonce'=>wp_create_nonce('wp_rest'),'authNonce'=>wp_create_nonce('decka_auth'),'user'=>is_user_logged_in()?['name'=>wp_get_current_user()->display_name,'email'=>wp_get_current_user()->user_email,'gate'=>current_user_can('decka_scan'),'admin'=>current_user_can('decka_manage')]:null,'resetUrl'=>wp_lostpassword_url(),'privacyUrl'=>get_privacy_policy_url(),'termsUrl'=>Decka_DB::settings()['terms_url']??'','googleLogin'=>!empty(Decka_DB::settings()['google_client_id'])&&!empty(Decka_DB::settings()['google_client_secret'])?add_query_arg(['action'=>'decka_google_start','_wpnonce'=>wp_create_nonce('decka_auth')],admin_url('admin-post.php')):null];}
+    public static function config():array {return ['shopUrl'=>home_url('/bilety/'),'scannerUrl'=>home_url('/skaner/'),'api'=>rest_url('decka/v1/'),'nonce'=>wp_create_nonce('wp_rest'),'authNonce'=>wp_create_nonce('decka_auth'),'user'=>is_user_logged_in()?['name'=>wp_get_current_user()->display_name,'email'=>wp_get_current_user()->user_email,'gate'=>current_user_can('decka_scan'),'admin'=>current_user_can('decka_manage')]:null,'resetUrl'=>wp_lostpassword_url(),'privacyUrl'=>get_privacy_policy_url(),'termsUrl'=>Decka_DB::settings()['terms_url']??'','googleLogin'=>!empty(Decka_DB::settings()['google_client_id'])&&!empty(Decka_DB::settings()['google_client_secret'])?add_query_arg(['action'=>'decka_google_start','_wpnonce'=>wp_create_nonce('decka_auth')],admin_url('admin-post.php')):null];}
     public static function embed(string $view):string {
         $url=add_query_arg(['action'=>'decka_app','view'=>$view],admin_url('admin-post.php'));
         $id=wp_unique_id('decka-shop-');
@@ -66,7 +66,7 @@ final class Decka_API {
 
     }
     public static function app():void {
-        $view=sanitize_key($_GET['view']??'shop');if($view==='admin'&&!current_user_can('decka_manage'))wp_die('Brak dostępu.',403);
+        Decka_Guest::init();$view=sanitize_key($_GET['view']??'shop');if($view==='admin'&&!current_user_can('decka_manage'))wp_die('Brak dostępu.',403);
         $file=DECKA_DIR.($view==='admin'?'assets/admin/index.html':'assets/index.html');if(!file_exists($file))wp_die('Brak zbudowanego interfejsu. Zainstaluj pełną paczkę ZIP.');
         status_header(200);nocache_headers();header('Content-Type: text/html; charset=UTF-8');header('X-Frame-Options: SAMEORIGIN');header('Referrer-Policy: same-origin');
         $config=self::config();$config['view']=sanitize_key($_GET['view']??'shop');$config['order']=absint($_GET['order']??0);$config['adminScreen']=sanitize_key($_GET['screen']??'overview');
