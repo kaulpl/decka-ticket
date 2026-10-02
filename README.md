@@ -1,10 +1,10 @@
-# Decka Bilety 0.3.4
+# Decka Bilety 0.3.5
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
-1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.4.zip`. Aktywuj wtyczkę.
+1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.5.zip`. Aktywuj wtyczkę.
 2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
 3. Utwórz stronę **Bilety** z blokiem Krótki kod: `[decka_bilety]`.
 4. Skaner działa pod adresem **/bileter** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
@@ -177,7 +177,7 @@ Poprawiono również formatowanie definicji tabel dla dbDelta: przecinki w domy�
 
 Wtyczka używa teraz własnych tabel `{prefiks WordPressa}dect_*` (np. `wp_dect_orders`). Aktualizacja tworzy osiem tabel na podstawie aktualnego schematu i jednorazowo przenosi wspólne kolumny z `{prefiks WordPressa}decka_*`. Nie kopiuje obcych pól, indeksów ani triggerów, w tym zgłoszonego `order_number`. Stare tabele i dodatkowe dane pozostają nienaruszone. Nie potwierdzono, z jakiej wtyczki pochodził ten indeks.
 
-Migracja zachowuje identyfikatory, kwoty, kody QR, sesje Stripe, rezerwacje, statusy oraz historię wejść. Porównuje liczbę i wartości kopiowanych rekordów. Wszystkie dane i znacznik przełączenia zatwierdza w jednej transakcji; błąd wycofuje kopiowanie, blokuje zakup i nie usuwa źródła. Nie nadpisuje niepustych tabel docelowych i nie powtarza kopiowania po udanym przełączeniu. Wymaga InnoDB również dla tabeli opcji WordPressa. Ustawienia i konta WordPressa pozostają bez zmiany nazw.
+Migracja zachowuje identyfikatory, kwoty, kody QR, sesje Stripe, rezerwacje, statusy oraz historię wejść. Porównuje liczbę i wartości kopiowanych rekordów. Wszystkie dane i znacznik przełączenia zatwierdza w jednej transakcji; błąd wycofuje kopiowanie, blokuje zakup i nie usuwa źródła. Nie nadpisuje niepustych tabel docelowych i nie powtarza kopiowania po udanym przełączeniu. Od 0.3.5 znacznik migracji jest zatwierdzany w dedykowanej tabeli InnoDB `dect_state`; tabela opcji WordPressa może pozostać MyISAM. Ustawienia i konta WordPressa pozostają bez zmiany nazw.
 
 Aktualizację wykonaj w oknie serwisowym, bez trwających żądań zakupu lub skanowania ze starej wersji PHP. Po przełączeniu starsza wersja wtyczki nie odczyta nowych transakcji z dect_; nie należy wracać do starego ZIP-a jako metody cofania danych. Stare tabele są archiwum, nie stale synchronizowaną kopią.
 
@@ -190,3 +190,14 @@ Kontrolowany jest również zapis odpowiedzi Stripe, danych potwierdzonej płatn
 Przycisk „Sprawdź pełną strukturę” nie zapisuje historii w tabeli audit. Dzięki temu działa także przed zakończeniem migracji i przy uszkodzonej tabeli historii. Ustawienia można zapisać przed migracją bez próby zapisu do jeszcze zablokowanych tabel. Komunikat blokady informuje o nieukończonym przełączeniu, zamiast sugerować, że migracja cały czas trwa.
 
 Kontrola struktury jest odczytem; nie wykonuje migracji. Aby ponowić migrację i zobaczyć konkretny powód jej niepowodzenia, użyj „Sprawdź i uzupełnij strukturę bazy”.
+
+## Status migracji i odzyskiwanie po błędzie (0.3.5)
+
+- „Sprawdź strukturę i stan danych”: odczytuje strukturę oraz liczby rekordów w źródle i celu. Aktualizuje raport, bez kopiowania danych.
+- „Napraw strukturę i ponów migrację”: tworzy/uzupełnia tabele, sprawdza je i przenosi dane. Ponowienie nie nadpisuje niepustego celu. Po sukcesie przycisk nazywa się „Sprawdź i napraw aktywną bazę”.
+- Wynik „Pola i indeksy nowych tabel są zgodne” nie oznacza zakończenia migracji. Decydujący jest status „Nowa baza jest aktywna”.
+- Nieudana próba zapisuje konkretny etap, tabelę, bezpieczną przyczynę i czas. Raport odświeża się także po nieudanej operacji. Stary błąd zapisu jest wyraźnie oznaczony jako historyczny.
+
+Poprzedni migrator niepotrzebnie wymagał InnoDB dla wp_options. Teraz własny znacznik dect_state jest zatwierdzany razem z danymi, a opcja WordPressa jest tylko kopią dla zgodności. Jeśli jej aktualizacja lub pamięć podręczna zawiedzie, wtyczka rozpoznaje zatwierdzenie we własnej tabeli i nie kopiuje danych drugi raz. Kod nie zmienia silnika tabel WordPressa.
+
+Podczas nieukończonej migracji klient otrzymuje komunikat o czasowej niedostępności sprzedaży i HTTP 503, zamiast ogólnego błędu pobierania oferty. Przyczyna konkretnego hostingu wymaga odczytu wyniku migracji — poprawny raport struktury nie wskazuje, na którym etapie zatrzymał się transfer.

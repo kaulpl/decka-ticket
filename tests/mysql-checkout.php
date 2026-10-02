@@ -82,14 +82,16 @@ $wpdb->query("UPDATE $oldOrders SET order_number=CONCAT('OLD-',id)");$wpdb->quer
 $old=$wpdb->suppress_errors(true);$legacy['request_key']=bin2hex(random_bytes(16));$legacy['legacy_required']=0;
 $duplicate=$wpdb->insert($oldOrders,$legacy);$diagnosis=Decka_DB::diagnose('insert','orders',$wpdb->last_error);$wpdb->suppress_errors($old);
 decka_check($duplicate===false&&$diagnosis['index']==='order_number','reported legacy order_number conflict reproduced');
-delete_option('decka_storage_namespace');update_option('decka_schema_version','0.3.2');
+$wpdb->query('DELETE FROM '.Decka_DB::table('state'));delete_option('decka_storage_namespace');update_option('decka_schema_version','0.3.2');
+$wpdb->query("ALTER TABLE {$wpdb->options} ENGINE=MyISAM");
 $blocked=false;try{Decka_DB::require_storage();}catch(RuntimeException $e){$blocked=true;}decka_check($blocked,'checkout blocked before complete migration');
 // Force a failure after events/orders copied, proving the entire migration rolls back.
 $legacyItems=$wpdb->prefix.'decka_items';$firstItem=$snapshots['items'][0];
 $wpdb->query("ALTER TABLE $legacyItems MODIFY COLUMN amount varchar(30) NOT NULL");
 $wpdb->update($legacyItems,['amount'=>'invalid-number'],['id'=>$firstItem['id']]);
 $old=$wpdb->suppress_errors(true);$migrationFailed=false;try{Decka_DB::install();}catch(RuntimeException $e){$migrationFailed=true;}$wpdb->suppress_errors($old);
-decka_check($migrationFailed&&get_option('decka_storage_namespace')!=='dect','failed migration never switches active namespace');
+decka_check($migrationFailed&&!Decka_DB::storage_ready(),'failed migration never switches active namespace');
+$status=get_option('decka_migration_status');decka_check($status['state']==='failed'&&$status['step']==='copy'&&$status['table']==='items','specific failed migration stage and table persisted');
 $inspection=Decka_Admin_API::action(['operation'=>'database_inspect']);decka_check($inspection['ok']&&is_array(get_option('decka_schema_audit')),'admin inspection works before migration without writing to blocked audit table');
 foreach($tables as $t)decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table($t))===0,"failed migration rolls back $t");
 decka_check((int)$wpdb->get_var("SELECT COUNT(*) FROM $oldOrders")===count($snapshots['orders']),'failed migration leaves source intact');
@@ -100,7 +102,9 @@ $refused=false;try{Decka_DB::install();}catch(RuntimeException $e){$refused=true
 decka_check($refused&&(int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('audit'))===1,'nonempty target preserved and migration refused');
 $wpdb->query('DELETE FROM '.Decka_DB::table('audit'));
 Decka_DB::install();$wpdb->flush();$wpdb->col_meta=[];
-decka_check(get_option('decka_storage_namespace')==='dect','migration activates dect namespace');
+decka_check(get_option('decka_storage_namespace')==='dect','migration activates dect namespace with MyISAM WordPress options');
+decka_check($wpdb->get_var('SELECT value FROM '.Decka_DB::table('state')." WHERE name='namespace'")==='dect','migration marker committed inside own InnoDB table');
+$wpdb->query("ALTER TABLE {$wpdb->options} ENGINE=InnoDB");
 foreach($tables as $table){
     $rows=$wpdb->get_results('SELECT * FROM '.Decka_DB::table($table),ARRAY_A);
     // Row order is not part of the database contract.

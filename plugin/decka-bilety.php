@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Decka Bilety
  * Description: Numerowane miejsca, Stripe, bilety PDF i kontrola wejścia Decki Pelplin.
- * Version: 0.3.4
+ * Version: 0.3.5
  * Update URI: https://github.com/kaulpl/decka-ticket
  * Requires at least: 6.6
  * Requires PHP: 8.2
@@ -11,7 +11,7 @@
 defined('ABSPATH') || exit;
 define('DECKA_DIR', plugin_dir_path(__FILE__));
 define('DECKA_URL', plugin_dir_url(__FILE__));
-define('DECKA_VERSION', '0.3.4');
+define('DECKA_VERSION', '0.3.5');
 define('DECKA_FILE', __FILE__);
 foreach (['domain','db','stripe','service','tickets','league','api','identity','wallet','updater','admin-api','admin'] as $part) require_once DECKA_DIR."includes/$part.php";
 Decka_Updater::init();
