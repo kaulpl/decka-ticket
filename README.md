@@ -22,7 +22,7 @@ Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-
 
 ## Instalacja
 
-1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.5.zip`. Aktywuj wtyczkę.
+1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.4.0.zip`. Aktywuj wtyczkę.
 2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
 3. Utwórz stronę **Bilety** z blokiem Krótki kod: `[decka_bilety]`.
 4. Skaner działa pod adresem **/bileter** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
@@ -219,3 +219,7 @@ Kontrola struktury jest odczytem; nie wykonuje migracji. Aby ponowić migrację 
 Poprzedni migrator niepotrzebnie wymagał InnoDB dla wp_options. Teraz własny znacznik dect_state jest zatwierdzany razem z danymi, a opcja WordPressa jest tylko kopią dla zgodności. Jeśli jej aktualizacja lub pamięć podręczna zawiedzie, wtyczka rozpoznaje zatwierdzenie we własnej tabeli i nie kopiuje danych drugi raz. Kod nie zmienia silnika tabel WordPressa.
 
 Podczas nieukończonej migracji klient otrzymuje komunikat o czasowej niedostępności sprzedaży i HTTP 503, zamiast ogólnego błędu pobierania oferty. Przyczyna konkretnego hostingu wymaga odczytu wyniku migracji — poprawny raport struktury nie wskazuje, na którym etapie zatrzymał się transfer.
+
+### Weryfikacja interfejsu 0.4.0
+
+Po zbudowaniu frontendu uruchom `node tests/shop-ui.mjs`, `node tests/scanner-ui.mjs` i `node tests/settings-ui.mjs` z dostępnym Playwright/Chromium. Opcjonalne zmienne `DECKA_PLAYWRIGHT_MODULE` i `CHROME_PATH` wskazują lokalną instalację. Testy korzystają z izolowanych odpowiedzi API. Sprawdzają zakup gościnny, brak PDF przed płatnością, proporcje kafelków, obliczenia raportów, przełączniki portfeli i dynamiczne wyszukiwanie bileterów. Test skanera dekoduje prawdziwy QR z syntetycznego obrazu kamery i sprawdza cztery stany oraz automatyczne wznowienie po 2 sekundach. Nie zastępuje to sprawdzenia aparatu na fizycznym telefonie.
