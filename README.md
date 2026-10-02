@@ -1,3 +1,14 @@
+## Wydanie 0.4.0
+
+- Główna aplikacja działa samodzielnie pod `/bilety/`, bez nagłówka motywu WordPressa; skaner pod `/skaner/`. Poprzednie adresy przekierowują na nowe. Wyklucz te dwie ścieżki i API `decka/v1` z cache stron/CDN.
+- Zakup gościnny: e-mail, imię, nazwisko, opcjonalny telefon. Konto nie jest tworzone. Zamówienia i pobrania w tej przeglądarce chroni losowy identyfikator w ciasteczku HttpOnly oraz powiązane zabezpieczenie żądań. E-mail sam nie daje dostępu do zamówień. Bilet przychodzi w załączniku po potwierdzonej płatności; bezpłatne bilety i vouchery nie wymagają płatności.
+- Kafle meczów mają ograniczoną szerokość i pokazują całą grafikę w proporcji 1920:1008. PDF dopasowuje wysokość grafiki do proporcji i mieści bilet na jednej stronie A4 (skrajnie wysokie obrazy są proporcjonalnie zmniejszane).
+- Synchronizacja ustawia wejście od 2 godzin przed rozpoczęciem do 2 godzin po rozpoczęciu meczu. Ręcznie zmienione godziny mają pierwszeństwo. Edycja meczu pozwala wrócić do automatycznych godzin. Zmiana terminu nadal zamyka sprzedaż do ponownego otwarcia przez klub.
+- Raporty obejmują normalne, ulgowe, vouchery, bezpłatne, oczekujące, sprzedaż, wejścia i przychody per mecz. Wykresy zapełnienia dotyczą 340 miejsc B/C/D, a nie wszystkich miejsc fizycznych w hali.
+- Aktualizację można zainstalować przyciskiem przez standardowy, chroniony mechanizm WordPressa. Diagnostyka Stripe odczytuje aktywne środowisko, klucz API i konfigurację webhooka; osobno pokazuje, czy odebrano już poprawnie podpisany webhook. Nie tworzy transakcji i nie zastępuje próby płatności BLIK na hostingu.
+- Apple Wallet i Google Wallet mają osobne przełączniki. Wyłączenie ukrywa konfigurację i wyłącza wydawanie portfeli; zapisane klucze pozostają zachowane.
+- Zespół bileterów: wyszukiwanie po fragmencie imienia/nazwiska/loginu/e-maila, nadawanie oraz usuwanie dostępu bez kasowania konta kibica. Skaner nie ma ręcznego wpisywania kodu; wynik pokazuje przez 2 sekundy, następnie wraca do kamery. Zielony oznacza wejście, żółty wykorzystany bilet, niebieski inny mecz, czerwony pozostałe błędy.
+
 ## Wydanie 0.3.6
 
 - Migracja rozdziela kolizje `request_once` ze starej bazy, także wynikające z różnych reguł porównywania tekstu. Najstarsze zamówienie zachowuje dotychczasowy klucz ponowienia, kolejne otrzymują deterministyczne klucze techniczne. Identyfikatory zamówień, płatności, bilety i QR pozostają bez zmian; źródłowe tabele nie są modyfikowane. Raport podaje liczbę zmienionych kluczy. Każdy inny konflikt nadal bezpiecznie wycofuje całą migrację.

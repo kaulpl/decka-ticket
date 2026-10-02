@@ -36,7 +36,7 @@ final class Decka_Identity {
             elseif($linked)$uid=$linked;
             else{if(email_exists($email))throw new RuntimeException('Masz już konto. Zaloguj się hasłem i wybierz Połącz Google w Moje bilety.');if(empty($s['registration']))throw new RuntimeException('Rejestracja jest wyłączona.');$uid=wp_insert_user(['user_login'=>'google_'.substr(hash('sha256',$claims['sub']),0,32),'user_email'=>$email,'user_pass'=>wp_generate_password(40,true),'display_name'=>sanitize_text_field($claims['name']??'Kibic'),'role'=>'subscriber']);if(is_wp_error($uid))throw new RuntimeException('Nie można utworzyć konta. Spróbuj ponownie.');}
             if(!$linked&&!add_option($map,$uid,'','no')&&(int)get_option($map)!==$uid)throw new RuntimeException('Nie można połączyć konta Google.');
-            if(!get_user_by('id',$uid))throw new RuntimeException('Konto nie istnieje.');wp_set_current_user($uid);wp_set_auth_cookie($uid,true,is_ssl());Decka_DB::audit('google_login',$uid);wp_safe_redirect(home_url('/kup-bilet/'));exit;
-        }catch(Throwable $e){wp_die(esc_html($e->getMessage()).' <a href="'.esc_url(home_url('/kup-bilet/')).'">Wróć do biletów</a>','Logowanie Google',['response'=>400]);}
+            if(!get_user_by('id',$uid))throw new RuntimeException('Konto nie istnieje.');wp_set_current_user($uid);wp_set_auth_cookie($uid,true,is_ssl());Decka_DB::audit('google_login',$uid);wp_safe_redirect(home_url('/bilety/'));exit;
+        }catch(Throwable $e){wp_die(esc_html($e->getMessage()).' <a href="'.esc_url(home_url('/bilety/')).'">Wróć do biletów</a>','Logowanie Google',['response'=>400]);}
     }
 }

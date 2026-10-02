@@ -3,7 +3,7 @@
 final class Decka_Wallet {
     private static function secret(string $key):string {return Decka_Stripe::decrypt(Decka_DB::settings()[$key]??'');}
     public static function enabled(string $type):bool {
-        $s=Decka_DB::settings();return $type==='apple'?class_exists('ZipArchive')&&!empty($s['apple_pass_type'])&&!empty($s['apple_team_id'])&&!empty($s['apple_certificate'])&&!empty($s['apple_private_key'])&&!empty($s['apple_wwdr']):!empty($s['google_wallet_issuer'])&&!empty($s['google_wallet_credentials']);
+        $s=Decka_DB::settings();if(isset($s[$type.'_wallet_enabled'])&&!$s[$type.'_wallet_enabled'])return false;return $type==='apple'?class_exists('ZipArchive')&&!empty($s['apple_pass_type'])&&!empty($s['apple_team_id'])&&!empty($s['apple_certificate'])&&!empty($s['apple_private_key'])&&!empty($s['apple_wwdr']):!empty($s['google_wallet_issuer'])&&!empty($s['google_wallet_credentials']);
     }
     public static function links(int $order):array {
         $links=[];foreach(Decka_Tickets::documents($order) as $doc)foreach(['apple','google'] as $type)if(self::enabled($type))$links[]=['label'=>($type==='apple'?'Apple Wallet':'Google Wallet').' · miejsce '.$doc['ticket']->seat_id,'url'=>add_query_arg(['action'=>'decka_wallet','order'=>$order,'ticket'=>$doc['ticket']->id,'type'=>$type,'_wpnonce'=>wp_create_nonce('decka_wallet_'.$order)],admin_url('admin-post.php'))];return $links;
@@ -31,7 +31,7 @@ final class Decka_Wallet {
         $b64=fn($v)=>rtrim(strtr(base64_encode($v),'+/','-_'),'=');$unsigned=$b64(wp_json_encode(['alg'=>'RS256','typ'=>'JWT'])).'.'.$b64(wp_json_encode($payload));if(!openssl_sign($unsigned,$signature,$credentials['private_key'],OPENSSL_ALGO_SHA256))throw new RuntimeException('Nie można podpisać biletu Google.');return 'https://pay.google.com/gp/v/save/'.$unsigned.'.'.$b64($signature);
     }
     public static function download():void {
-        $id=absint($_GET['order']??0);check_admin_referer('decka_wallet_'.$id);$order=Decka_Service::order($id);if(!$order||!get_current_user_id()||((int)$order->user_id!==get_current_user_id()&&!current_user_can('decka_manage')))wp_die('Brak dostępu.',403);
+        $id=absint($_GET['order']??0);check_admin_referer('decka_wallet_'.$id);$order=Decka_Service::order($id);if(!$order||(!Decka_Guest::owns($order)&&!current_user_can('decka_manage')))wp_die('Brak dostępu.',403);
         try{$doc=null;foreach(Decka_Tickets::documents($id) as $candidate)if((int)$candidate['ticket']->id===absint($_GET['ticket']??0))$doc=$candidate;if(!$doc)throw new RuntimeException('Nie znaleziono biletu.');nocache_headers();header('Referrer-Policy: no-referrer');if(($_GET['type']??'')==='google'){wp_redirect(self::google($doc,$order));exit;}$bytes=self::apple($doc,$order);header('Content-Type: application/vnd.apple.pkpass');header('Content-Disposition: attachment; filename="Decka-'.$doc['ticket']->id.'.pkpass"');header('X-Content-Type-Options: nosniff');echo $bytes;}catch(Throwable $e){wp_die(esc_html($e->getMessage()));}exit;
     }
 }

@@ -1,21 +1,27 @@
 <?php
 final class Decka_Service {
     public static function order(int $id):?object{global $wpdb;return $wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('orders').' WHERE id=%d',$id));}
-    public static function create(array $input,bool $voucher=false):array {
+    public static function create(array $input,bool $voucher=false,string $guestHash=''):array {
         global $wpdb;Decka_DB::require_storage();$mode=Decka_DB::mode();$uid=get_current_user_id();
-        if(!$uid)throw new RuntimeException('Zaloguj się, aby dokończyć zakup.');
+        if(!$uid&&($voucher||!preg_match('/^[a-f0-9]{64}$/',$guestHash)))throw new RuntimeException('Odśwież stronę zakupu.');
         $key=sanitize_text_field($input['request_key']??'');
         if(!preg_match('/^[a-zA-Z0-9-]{16,64}$/',$key))throw new RuntimeException('Niepoprawny identyfikator zamówienia.');
+        $buyer=[];
+        if(!$uid){
+            $key=hash_hmac('sha256',$key,$guestHash);
+            foreach(['first_name','last_name'] as $field){$value=trim(sanitize_text_field($input[$field]??''));if($value===''||mb_strlen($value)>100)throw new RuntimeException('Podaj poprawne imię i nazwisko.');$buyer[$field]=$value;}
+            $phone=trim(sanitize_text_field($input['phone']??''));if($phone!==''&&!preg_match('/^[+0-9 ()-]{6,40}$/',$phone))throw new RuntimeException('Podaj poprawny numer telefonu lub pozostaw pole puste.');$buyer['phone']=$phone;$buyer['guest_hash']=$guestHash;
+        }
         $existing=$wpdb->get_var($wpdb->prepare('SELECT id FROM '.Decka_DB::table('orders').' WHERE user_id=%d AND mode=%s AND request_key=%s',$uid,$mode,$key));
         if($existing)return self::checkout((int)$existing);
         $seats=(array)($input['seats']??[]); if(!$seats || count($seats)>10)throw new RuntimeException('Wybierz od 1 do 10 miejsc.');
         $catalog=array_column(Decka_DB::seats()['seats'],null,'id');$chosen=[];
         foreach($seats as $s){$id=(string)($s['id']??'');$kind=$s['kind']??'normal';if(!isset($catalog[$id])||isset($chosen[$id])||!in_array($kind,['normal','reduced'],true))throw new RuntimeException('Niepoprawne lub powtórzone miejsce.');$chosen[$id]=$kind;}
         ksort($chosen,SORT_NATURAL);
-        $email=$voucher?sanitize_email($input['email']??''):wp_get_current_user()->user_email;
+        $email=($voucher||!$uid)?strtolower(sanitize_email($input['email']??'')):strtolower(wp_get_current_user()->user_email);
         if(!is_email($email))throw new RuntimeException('Podaj prawidłowy adres e-mail.');
         $offer_id=$voucher?0:absint($input['offer_id']??0);$event_id=absint($input['event_id']??0);
-        $id=Decka_DB::tx(function()use($wpdb,$mode,$uid,$key,$chosen,$email,$voucher,$offer_id,$event_id,$input){
+        $id=Decka_DB::tx(function()use($wpdb,$mode,$uid,$key,$chosen,$email,$voucher,$offer_id,$event_id,$input,$buyer){
             $now=gmdate('Y-m-d H:i:s');$settings=Decka_DB::settings();$offer=null;$event_rows=[];
             if($offer_id){$offer=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('offers').' WHERE id=%d FOR UPDATE',$offer_id));if(!$offer || !$offer->active || ($offer->starts_at && $offer->starts_at>$now)||($offer->ends_at && $offer->ends_at<$now))throw new RuntimeException('Oferta nie jest już dostępna.');}
             $events=$offer?json_decode($offer->event_ids,true):[$event_id];$events=array_values(array_unique(array_map('intval',$events)));sort($events);
@@ -24,7 +30,7 @@ final class Decka_Service {
             foreach($events as $eid){$ev=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('events').' WHERE id=%d FOR UPDATE',$eid));if(!$ev || $ev->cancelled || ($ev->starts_at && $ev->starts_at<=$now) || (!$offer && (!$ev->starts_at || (!$voucher && !$ev->sale_open))))throw new RuntimeException('Sprzedaż na jeden z meczów jest zamknięta.');$event_rows[$eid]=$ev;}
             $again=$wpdb->get_var($wpdb->prepare('SELECT id FROM '.Decka_DB::table('orders').' WHERE user_id=%d AND mode=%s AND request_key=%s',$uid,$mode,$key));if($again)return (int)$again;
             $limit=max(1,(int)($settings['max_per_fan']??10));
-            if(!$voucher)foreach($events as $eid){$used=(int)$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM '.Decka_DB::table('items').' i JOIN '.Decka_DB::table('orders').' o ON o.id=i.order_id WHERE o.user_id=%d AND o.mode=%s AND i.event_id=%d AND o.status IN ("creating","pending","paid","free")',$uid,$mode,$eid));if($used+count($chosen)>$limit)throw new RuntimeException('Limit '.$limit.' biletów na kibica na mecz został przekroczony (wliczamy oczekujące płatności).');}
+            if(!$voucher)foreach($events as $eid){$used=(int)$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM '.Decka_DB::table('items').' i JOIN '.Decka_DB::table('orders').' o ON o.id=i.order_id WHERE o.email=%s AND o.mode=%s AND i.event_id=%d AND o.status IN ("creating","pending","paid","free")',$email,$mode,$eid));if($used+count($chosen)>$limit)throw new RuntimeException('Limit '.$limit.' biletów na kibica na mecz został przekroczony (wliczamy oczekujące płatności).');}
             $raw=[];$total=0;
             foreach($chosen as $seat=>$kind){$price=$voucher?0:(int)($offer?($kind==='normal'?$offer->normal_price:$offer->reduced_price):($event_rows[$event_id]->{$kind.'_price'}??$settings[$kind]??($kind==='normal'?2500:1500)));if($price<0)throw new RuntimeException('Nieprawidłowa cena.');$total+=$price;$amounts=Decka_Domain::allocate($price,count($events));foreach($events as $i=>$eid)$raw[]=['event_id'=>$eid,'seat_id'=>(string)$seat,'kind'=>$voucher?'voucher':$kind,'amount'=>$amounts[$i]];}
             $promo=null;$code=strtoupper(sanitize_text_field($input['promo']??''));$before=$total;
@@ -39,7 +45,7 @@ final class Decka_Service {
             }
             if(!$voucher && $total>0 && $total<200)throw new RuntimeException('Po rabacie zamówienie musi wynosić co najmniej 2 zł albo 0 zł.');
             if($total>0 && (!Decka_Stripe::secret($mode)||!Decka_Stripe::secret($mode,'webhook')))throw new RuntimeException('Płatności nie są jeszcze skonfigurowane. Skontaktuj się z klubem.');
-            $oid=Decka_DB::insert('orders',['mode'=>$mode,'user_id'=>$uid,'request_key'=>$key,'email'=>$email,'status'=>'creating','session_id'=>null,'payment_id'=>null,'total'=>$total,'discount'=>$before-$total,'offer_id'=>$offer_id?:null,'promo_id'=>$promo?$promo->id:null,'created_at'=>$now,'package_ack'=>$offer?'schedule-v1':null]);
+            $oid=Decka_DB::insert('orders',['mode'=>$mode,'user_id'=>$uid,'request_key'=>$key,'email'=>$email,'status'=>'creating','session_id'=>null,'payment_id'=>null,'total'=>$total,'discount'=>$before-$total,'offer_id'=>$offer_id?:null,'promo_id'=>$promo?$promo->id:null,'created_at'=>$now,'package_ack'=>$offer?'schedule-v1':null]+$buyer);
             foreach($raw as $item){
                 $occupied=$wpdb->get_var($wpdb->prepare('SELECT order_id FROM '.Decka_DB::table('inventory').' WHERE mode=%s AND event_id=%d AND seat_id=%s',$mode,$item['event_id'],$item['seat_id']));
                 if($occupied!==null)throw new RuntimeException('Miejsce '.$item['seat_id'].' jest już zajęte na jednym z meczów. Wybierz inne.');
@@ -47,8 +53,8 @@ final class Decka_Service {
                 Decka_DB::insert('items',array_merge($item,['order_id'=>$oid]));
             }
             if($total===0){self::issue_locked($oid,$voucher?'voucher':'free');if($voucher)Decka_DB::audit('voucher',$oid,$email);return $oid;}
-            $base=admin_url('admin-post.php?action=decka_app');
-            $payload=['mode'=>'payment','locale'=>'pl','customer_email'=>$email,'client_reference_id'=>(string)$oid,'metadata'=>['decka_order'=>(string)$oid,'decka_mode'=>$mode], 'payment_intent_data'=>['metadata'=>['decka_order'=>(string)$oid]],'payment_method_types'=>['card','blik'],'success_url'=>$base.'&order='.$oid,'cancel_url'=>$base.'&order='.$oid.'&cancel=1','expires_at'=>time()+1860,'line_items'=>[['price_data'=>['currency'=>'pln','unit_amount'=>$total,'product_data'=>['name'=>'Decka Pelplin — '.($offer?$offer->name:'bilety').' ('.count($raw).' wejść)']],'quantity'=>1]]];
+            $base=home_url('/bilety/?');
+            $payload=['mode'=>'payment','locale'=>'pl','customer_email'=>$email,'client_reference_id'=>(string)$oid,'metadata'=>['decka_order'=>(string)$oid,'decka_mode'=>$mode], 'payment_intent_data'=>['metadata'=>['decka_order'=>(string)$oid]],'payment_method_types'=>['card','blik'],'success_url'=>$base.'order='.$oid,'cancel_url'=>$base.'order='.$oid.'&cancel=1','expires_at'=>time()+1860,'line_items'=>[['price_data'=>['currency'=>'pln','unit_amount'=>$total,'product_data'=>['name'=>'Decka Pelplin — '.($offer?$offer->name:'bilety').' ('.count($raw).' wejść)']],'quantity'=>1]]];
             Decka_DB::update('orders',['stripe_payload'=>wp_json_encode($payload)],['id'=>$oid]);
             return $oid;
         });
