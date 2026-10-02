@@ -2,10 +2,13 @@
 final class Decka_DB_Error extends RuntimeException {
     public function __construct(public array $diagnostic) {parent::__construct('Nie udało się zapisać zamówienia. Kod: '.$diagnostic['reference'].'. Przekaż ten kod obsłudze klubu.');}
 }
+final class Decka_Migration_Error extends RuntimeException {}
 final class Decka_DB {
-    public const SCHEMA_VERSION='0.3.3';
+    public const SCHEMA_VERSION='0.3.5';
     private static int $transaction_depth=0;
     private static bool $installing=false;
+    private static string $migration_step='start';
+    private static string $migration_table='';
     public static function diagnose(string $operation,string $table,string $error):array {
         $reason='database';$field='';$index='';
         if(preg_match("/Unknown column '([a-zA-Z0-9_]+)'/i",$error,$m)){$reason='missing_column';$field=$m[1];}
@@ -35,12 +38,12 @@ final class Decka_DB {
         if(self::$transaction_depth===0)self::remember($error);throw $error;
     }
     public static function maybe_upgrade():void {
-        if(get_option('decka_schema_version')===self::SCHEMA_VERSION&&get_option('decka_storage_namespace')==='dect')return;
+        if(get_option('decka_schema_version')===self::SCHEMA_VERSION&&self::storage_ready())return;
         // A failed upgrade must not take down unrelated WordPress pages or run on every request.
         if(get_transient('decka_schema_retry'))return;
         set_transient('decka_schema_retry',1,300);
         try{self::install();delete_option('decka_schema_error');delete_transient('decka_schema_retry');}
-        catch(Throwable $e){update_option('decka_schema_error','Nie ukończono sprawdzenia struktury bazy. Otwórz Ustawienia → Baza danych i ponów weryfikację.',false);}
+        catch(Throwable $e){/* install() preserves the specific safe failure for the administrator. */}
     }
 
     public static function table(string $name): string {global $wpdb;return $wpdb->prefix.'dect_'.$name;}
@@ -51,8 +54,8 @@ final class Decka_DB {
         if($result===false)self::fail('update',$table);return (int)$result;
     }
     public static function require_storage():void {
-        if(!self::$installing&&get_option('decka_storage_namespace')!=='dect')
-            throw new RuntimeException('Baza biletów nie została jeszcze przełączona na dect_. Administrator: Ustawienia → Baza danych → Sprawdź i uzupełnij strukturę bazy.');
+        if(!self::$installing&&!self::storage_ready())
+            throw new RuntimeException('Baza biletów nie została jeszcze przełączona na dect_. Administrator: Ustawienia → Baza danych → Napraw strukturę i ponów migrację.');
     }
     public static function tx(callable $fn) {
         global $wpdb;self::query('START TRANSACTION');self::$transaction_depth++;
@@ -114,37 +117,74 @@ final class Decka_DB {
         }
         $report['ok']=!$report['issues'];return $report;
     }
+    public static function migration_inventory():array {
+        global $wpdb;$out=['source_prefix'=>$wpdb->prefix.'decka_','target_prefix'=>$wpdb->prefix.'dect_','tables'=>[]];
+        foreach(array_keys(self::schemas()) as $name){$row=['name'=>$name];
+            foreach(['source'=>'decka_','target'=>'dect_'] as $side=>$prefix){
+                $table=$wpdb->prefix.$prefix.$name;$exists=(bool)$wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s',$wpdb->esc_like($table)));
+                $info=$exists?$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',$table)):null;
+                $row[$side]=['exists'=>$exists,'rows'=>$exists?(int)$wpdb->get_var("SELECT COUNT(*) FROM $table"):null,'engine'=>$info->Engine??null];
+            }$out['tables'][]=$row;
+        }return $out;
+    }
+    public static function storage_ready():bool {
+        global $wpdb;
+        if(get_option('decka_storage_namespace')==='dect')return true;
+        $state=self::table('state');
+        // Older versions have no state table. Suppress only this metadata lookup's missing-table message.
+        $old=$wpdb->suppress_errors(true);$ready=$wpdb->get_var("SELECT value FROM $state WHERE name='namespace'")==='dect';$wpdb->suppress_errors($old);
+        return $ready;
+    }
+    private static function migration_failure(Throwable $e):void {
+        $detail=$e instanceof Decka_DB_Error?$e->diagnostic:null;
+        $message=$e instanceof Decka_Migration_Error?$e->getMessage():($detail?'Baza odrzuciła operację. Kod: '.$detail['reference'].'. Sprawdź przyczynę, pole lub indeks w szczegółach poniżej.':'Nieoczekiwany błąd migracji. Sprawdź dziennik PHP hostingu dla podanego czasu.');
+        $status=['state'=>'failed','time'=>gmdate('c'),'step'=>self::$migration_step,'table'=>self::$migration_table,'message'=>$message,'diagnostic'=>$detail];
+        update_option('decka_migration_status',$status,false);update_option('decka_schema_error',$message,false);
+    }
     public static function install():void {
-        global $wpdb;$lock='dect_schema_'.substr(hash('sha256',$wpdb->prefix),0,24);
-        if(!(int)$wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,10)',$lock)))throw new RuntimeException('Aktualizacja bazy już trwa. Spróbuj ponownie za chwilę.');
-        self::$installing=true;
-        try{self::install_locked();}finally{self::$installing=false;$wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)',$lock));}
+        global $wpdb;$lock='dect_schema_'.substr(hash('sha256',$wpdb->prefix),0,24);$locked=false;
+        self::$migration_step='lock';self::$migration_table='';
+        try{
+            $result=$wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,10)',$lock));
+            if($result===null)throw new Decka_Migration_Error('Serwer nie udostępnił blokady migracji. Hosting powinien sprawdzić obsługę funkcji GET_LOCK i uprawnienia bazy.');
+            if((int)$result!==1)throw new Decka_Migration_Error('Inne żądanie nadal aktualizuje bazę. Odczekaj minutę i ponów migrację.');
+            $locked=true;self::$installing=true;
+            update_option('decka_migration_status',['state'=>'running','time'=>gmdate('c'),'step'=>'schema','table'=>'','message'=>'Przygotowanie tabel i migracji.'],false);
+            self::install_locked();delete_option('decka_schema_error');delete_transient('decka_schema_retry');
+            update_option('decka_migration_status',['state'=>'complete','time'=>gmdate('c'),'step'=>'complete','table'=>'','message'=>'Nowe tabele są aktywne. Migracja została zatwierdzona.'],false);
+        }catch(Throwable $e){self::migration_failure($e);throw $e;}
+        finally{self::$installing=false;if($locked)$wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)',$lock));}
     }
     private static function install_locked():void {
         global $wpdb; require_once ABSPATH.'wp-admin/includes/upgrade.php';$c=$wpdb->get_charset_collate();
+        self::$migration_step='schema';self::$migration_table='';
         $schemas=self::schemas();
+        dbDelta('CREATE TABLE '.self::table('state')." (name varchar(64) NOT NULL,\nvalue longtext NOT NULL,\nPRIMARY KEY  (name)) ENGINE=InnoDB $c;");
+        $stateEngine=$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',self::table('state')));
+        if(!$stateEngine||strtoupper($stateEngine->Engine)!=='INNODB')throw new Decka_Migration_Error('Nie można utworzyć tabeli stanu migracji dect_state w InnoDB. Sprawdź uprawnienia CREATE.');
         foreach($schemas as $name=>$schema) dbDelta('CREATE TABLE '.self::table($name).' ('.preg_replace("/'(?:''|[^'])*'(*SKIP)(*F)|, /",",\n",$schema).") ENGINE=InnoDB $c;");
-        foreach(array_keys($schemas) as $name){$table=self::table($name);$row=$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',$table));if(!$row || strtoupper($row->Engine)!=='INNODB')throw new RuntimeException('Decka Bilety wymaga tabel InnoDB.');}
+        foreach(array_keys($schemas) as $name){$table=self::table($name);$row=$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',$table));if(!$row || strtoupper($row->Engine)!=='INNODB')throw new Decka_Migration_Error('Decka Bilety wymaga tabel InnoDB.');}
         // dbDelta's result describes intended changes; verify the actual columns before marking success.
         foreach($schemas as $name=>$schema){
             $columns=$wpdb->get_col('SHOW COLUMNS FROM '.self::table($name));
             preg_match_all('/(?:^|, )([a-z_]+) (?:bigint|varchar|datetime|int|tinyint|text|longtext)\b/',$schema,$matches);
-            if(!$columns||array_diff($matches[1],$columns))throw new RuntimeException('Brak wymaganych kolumn w tabeli biletowej '.$name.'. Sprawdź uprawnienia ALTER na hostingu.');
+            if(!$columns||array_diff($matches[1],$columns))throw new Decka_Migration_Error('Brak wymaganych kolumn w tabeli biletowej '.$name.'. Sprawdź uprawnienia ALTER na hostingu.');
         }
         // dbDelta does not reliably change nullability or DEFAULT NULL on an existing varchar.
         // A legacy empty session default collides with stripe_session before Stripe is called.
         $orders=self::table('orders');
         $session=$wpdb->get_row("SHOW COLUMNS FROM $orders LIKE 'session_id'");
-        if(!$session)throw new RuntimeException('Brak pola sesji płatności.');
+        if(!$session)throw new Decka_Migration_Error('Brak pola sesji płatności.');
         if($session->Null!=='YES'||$session->Default!==null){
             self::query("ALTER TABLE $orders MODIFY COLUMN session_id varchar(190) NULL DEFAULT NULL");
             $session=$wpdb->get_row("SHOW COLUMNS FROM $orders LIKE 'session_id'");
-            if(!$session||$session->Null!=='YES'||$session->Default!==null)throw new RuntimeException('Nie ukończono naprawy pola sesji płatności.');
+            if(!$session||$session->Null!=='YES'||$session->Default!==null)throw new Decka_Migration_Error('Nie ukończono naprawy pola sesji płatności.');
         }
         // Empty strings are not Stripe session IDs. Preserve every nonempty ID and its unique index.
         self::query("UPDATE $orders SET session_id=NULL WHERE session_id=''");
+        self::$migration_step='validate_schema';
         $report=self::inspect_schema();update_option('decka_schema_audit',$report,false);
-        if(!$report['ok'])throw new RuntimeException('Struktura bazy wymaga sprawdzenia: '.implode('; ',$report['issues']));
+        if(!$report['ok'])throw new Decka_Migration_Error('Struktura bazy wymaga sprawdzenia: '.implode('; ',$report['issues']));
         self::migrate_legacy();
         add_role('decka_bileter','Bileter Decka',['read'=>true,'decka_scan'=>true]);
         if($a=get_role('administrator')){$a->add_cap('decka_scan');$a->add_cap('decka_manage');}
@@ -154,52 +194,57 @@ final class Decka_DB {
     }
     private static function migrate_legacy():void {
         global $wpdb;
-        // Read the marker directly under the migration lock, avoiding another request's stale option cache.
-        $marker=$wpdb->get_var("SELECT option_value FROM {$wpdb->options} WHERE option_name='decka_storage_namespace'");
-        if($marker==='dect')return;
-        $optionEngine=$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',$wpdb->options));
-        if(!$optionEngine||strtoupper($optionEngine->Engine)!=='INNODB')throw new RuntimeException('Tabela opcji WordPressa wymaga InnoDB do bezpiecznej migracji.');
+        self::$migration_step='source_inventory';self::$migration_table='';
+        $state=self::table('state');
+        // The commit marker belongs to our InnoDB table, never to a potentially MyISAM wp_options.
+        if(self::storage_ready()){
+            self::query("INSERT INTO $state (name,value) VALUES ('namespace','dect') ON DUPLICATE KEY UPDATE value='dect'");
+            update_option('decka_storage_namespace','dect',false);return;
+        }
         $names=array_keys(self::schemas());$sources=[];
         foreach($names as $name){
             $source=$wpdb->prefix.'decka_'.$name;
             $exists=$wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s',$wpdb->esc_like($source)));
             if($exists){
                 $engine=$wpdb->get_row($wpdb->prepare('SHOW TABLE STATUS WHERE Name=%s',$source));
-                if(!$engine||strtoupper($engine->Engine)!=='INNODB')throw new RuntimeException('Stara tabela '.$name.' wymaga InnoDB przed migracją.');
+                if(!$engine||strtoupper($engine->Engine)!=='INNODB')throw new Decka_Migration_Error('Stara tabela '.$name.' wymaga InnoDB przed migracją.');
                 $sources[$name]=$source;
             }
         }
-        if($sources&&count($sources)!==count($names))throw new RuntimeException('Niekompletny zestaw starych tabel. Migracja przerwana bez usuwania danych.');
-        // Pre-create the option outside the data transaction, then change it atomically with all copied rows.
+        if($sources&&count($sources)!==count($names))throw new Decka_Migration_Error('Brakuje starych tabel: '.implode(', ',array_diff($names,array_keys($sources))).'. Przywróć je z kopii bazy; niczego nie usunięto.');
         add_option('decka_storage_namespace','pending','','no');
         $counts=[];
-        self::tx(function()use($wpdb,$names,$sources,&$counts){
+        self::tx(function()use($wpdb,$names,$sources,$state,&$counts){
+            self::$migration_step='check_target';
             foreach($names as $name){
+                self::$migration_table=$name;
                 $target=self::table($name);
-                if((int)$wpdb->get_var("SELECT COUNT(*) FROM $target"))throw new RuntimeException('Docelowa tabela '.$name.' nie jest pusta. Migracja nie nadpisuje istniejących danych.');
+                if((int)$wpdb->get_var("SELECT COUNT(*) FROM $target"))throw new Decka_Migration_Error('Docelowa tabela '.$name.' nie jest pusta. Migracja nie nadpisuje istniejących danych.');
             }
             foreach($sources as $name=>$source){
+                self::$migration_step='copy';self::$migration_table=$name;
                 $target=self::table($name);$sourceColumns=$wpdb->get_col("SHOW COLUMNS FROM $source");$targetColumns=$wpdb->get_results("SHOW COLUMNS FROM $target");$common=[];
                 foreach($targetColumns as $c){
                     if(in_array($c->Field,$sourceColumns,true))$common[]=$c->Field;
-                    elseif($c->Field==='id'||($c->Null!=='YES'&&$c->Default===null))throw new RuntimeException('Brak wymaganej kolumny źródłowej '.$name.'.'.$c->Field.'.');
+                    elseif($c->Field==='id'||($c->Null!=='YES'&&$c->Default===null))throw new Decka_Migration_Error('Brak wymaganej kolumny źródłowej '.$name.'.'.$c->Field.'.');
                 }
                 // Lock source rows until the complete copy commits. Copy data only, never legacy indexes/triggers.
                 self::query("SELECT * FROM $source FOR UPDATE",$name);
                 $quoted=implode(',',array_map(fn($c)=>'`'.$c.'`',$common));
                 self::query("INSERT INTO $target ($quoted) SELECT $quoted FROM $source",$name);
-                if($wpdb->get_results('SHOW WARNINGS'))throw new RuntimeException('Konwersja danych w tabeli '.$name.' wymaga sprawdzenia. Migracja została wycofana.');
+                if($wpdb->get_results('SHOW WARNINGS'))throw new Decka_Migration_Error('Konwersja danych w tabeli '.$name.' wymaga sprawdzenia. Migracja została wycofana.');
                 $primary=$name==='inventory'?['mode','event_id','seat_id']:['id'];
                 $join=implode(' AND ',array_map(fn($c)=>"s.`$c`=t.`$c`",$primary));
                 $same=implode(' AND ',array_map(fn($c)=>"s.`$c` <=> t.`$c`",$common));
-                if((int)$wpdb->get_var("SELECT COUNT(*) FROM $source s JOIN $target t ON $join WHERE NOT ($same)"))throw new RuntimeException('Niezgodność danych podczas migracji '.$name.'.');
+                if((int)$wpdb->get_var("SELECT COUNT(*) FROM $source s JOIN $target t ON $join WHERE NOT ($same)"))throw new Decka_Migration_Error('Niezgodność danych podczas migracji '.$name.'.');
                 $sourceCount=(int)$wpdb->get_var("SELECT COUNT(*) FROM $source");$targetCount=(int)$wpdb->get_var("SELECT COUNT(*) FROM $target");
-                if($sourceCount!==$targetCount)throw new RuntimeException('Niezgodna liczba rekordów podczas migracji '.$name.'.');
+                if($sourceCount!==$targetCount)throw new Decka_Migration_Error('Niezgodna liczba rekordów podczas migracji '.$name.'.');
                 $counts[$name]=$targetCount;
             }
-            // Keep this marker in the same InnoDB transaction as the data. Never cache it before COMMIT.
-            if($wpdb->query("UPDATE {$wpdb->options} SET option_value='dect' WHERE option_name='decka_storage_namespace'")!==1)throw new RuntimeException('Nie można zatwierdzić migracji bazy.');
+            self::$migration_step='commit';self::$migration_table='state';
+            self::query("INSERT INTO $state (name,value) VALUES ('namespace','dect') ON DUPLICATE KEY UPDATE value='dect'");
         });
+        update_option('decka_storage_namespace','dect',false);
         wp_cache_delete('decka_storage_namespace','options');wp_cache_delete('alloptions','options');wp_cache_delete('notoptions','options');
         update_option('decka_storage_migration',['completed_at'=>gmdate('c'),'source'=>'decka_','target'=>'dect_','rows'=>$counts,'legacy_preserved'=>true],false);
     }

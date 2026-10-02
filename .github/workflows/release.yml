@@ -42,16 +42,27 @@ jobs:
           name: decka-bilety
           path: dist/
   mysql:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - database: mysql
+            image: mysql:8.0
+            health: mysqladmin ping -h localhost -pdecka-ci-only
+          - database: mariadb
+            image: mariadb:10.11
+            health: healthcheck.sh --connect --innodb_initialized
+    name: Database (${{ matrix.database }})
     runs-on: ubuntu-latest
     services:
       mysql:
-        image: mysql:8.0
+        image: ${{ matrix.image }}
         env:
           MYSQL_ROOT_PASSWORD: decka-ci-only
           MYSQL_DATABASE: decka_test
         ports: ['3306:3306']
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -pdecka-ci-only"
+          --health-cmd="${{ matrix.health }}"
           --health-interval=10s --health-timeout=5s --health-retries=10
     steps:
       - uses: actions/checkout@v4
