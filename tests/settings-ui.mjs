@@ -23,7 +23,7 @@ await page.route('http://decka-ui.test/**',async route=>{const url=new URL(route
  if(type==='text/html')body=Buffer.from(body.toString().replace('<head>','<head><base href="http://decka-ui.test/"/><script>window.DECKA={api:"http://decka-ui.test/api/",nonce:"test",adminScreen:"settings"}</script>'));
  return route.fulfill({body,contentType:type});
 });
-const tab=name=>page.getByRole('navigation',{name:'Kategorie ustawień'}).getByRole('button',{name,exact:true});
+const tab=name=>page.getByRole('navigation',{name:'Kategorie ustawień'}).getByRole('button',{name:new RegExp('^'+name+'(?: Wymaga uwagi)?$')});
 await page.goto('http://decka-ui.test/admin/');await page.getByRole('heading',{name:'Zasady sprzedaży'}).waitFor();
 assert.equal(await page.getByLabel('Filtr meczu').count(),0,'irrelevant event filter hidden');
 await page.getByLabel('Bilet normalny (zł)',{exact:true}).fill('30');
