@@ -1,6 +1,6 @@
 'use client';
 import {useState} from 'react';
-import {CircleCheck,TriangleAlert,Database,Download,ChevronRight} from 'lucide-react';
+import {CircleCheck,TriangleAlert,Database,Download} from 'lucide-react';
 type Row=Record<string,any>;
 const stages:Row={lock:'Uzyskanie blokady',schema:'Przygotowanie tabel',validate_schema:'Kontrola struktury',source_inventory:'Odczyt starej bazy',check_target:'Kontrola nowej bazy',copy:'Kopiowanie danych',commit:'Zatwierdzanie migracji',complete:'Zakończono'};
 const reasons:Row={missing_column:'Brak wymaganej kolumny',required_field:'Brak wymaganej wartości',null_field:'Pole nie przyjmuje pustej wartości',value_length:'Nieprawidłowa długość danych',duplicate:'Powtórzona wartość klucza unikatowego',missing_table:'Brak tabeli',permissions:'Brak uprawnień bazy',busy:'Blokada bazy',encoding:'Nieobsługiwane kodowanie',validation:'Dane odrzucone przed zapisem',database:'Błąd wymagający sprawdzenia logu hostingu'};

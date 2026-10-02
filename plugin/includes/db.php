@@ -197,15 +197,16 @@ final class Decka_DB {
         global $wpdb;
         $columns=$wpdb->get_results("SHOW FULL COLUMNS FROM $target");$collations=[];
         foreach($columns as $column)if(in_array($column->Field,['mode','request_key'],true))$collations[$column->Field]=$column->Collation;
-        $equal=[];
+        $normalized=[];
         foreach(['mode','request_key'] as $field){
             $collation=$collations[$field]??'';$charset=explode('_',$collation)[0];
             if(!preg_match('/^[a-z0-9_]+$/i',$collation)||!preg_match('/^[a-z0-9]+$/i',$charset))throw new Decka_Migration_Error('Nie można ustalić reguł porównywania kluczy zamówień.');
-            $equal[]="CONVERT(a.`$field` USING $charset) COLLATE $collation = CONVERT(b.`$field` USING $charset) COLLATE $collation";
+            $normalized[$field]="CONVERT(a.`$field` USING $charset) COLLATE $collation";
         }
-        $join=implode(' AND ',$equal).' AND a.user_id=b.user_id AND a.id>b.id';
+        $group="SELECT MIN(a.id) first_id,a.user_id,".$normalized['mode']." mode_key,".$normalized['request_key']." retry_key FROM $source a GROUP BY a.user_id,mode_key,retry_key HAVING COUNT(*)>1";
+        $join=$normalized['mode']." = g.mode_key AND ".$normalized['request_key']." = g.retry_key AND a.user_id=g.user_id AND a.id<>g.first_id";
         // Compare with the destination collation, which can differ from the archive.
-        $ids=$wpdb->get_col("SELECT DISTINCT a.id FROM $source a JOIN $source b ON $join ORDER BY a.id");
+        $ids=$wpdb->get_col("SELECT a.id FROM $source a JOIN ($group) g ON $join ORDER BY a.id");
         if($wpdb->last_error)self::fail('query','orders');
         if(!$ids)return 's.`request_key`';
         $expression='CASE s.id';
