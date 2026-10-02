@@ -4,7 +4,7 @@ final class Decka_DB_Error extends RuntimeException {
 }
 final class Decka_Migration_Error extends RuntimeException {}
 final class Decka_DB {
-    public const SCHEMA_VERSION='0.3.5';
+    public const SCHEMA_VERSION='0.3.6';
     private static int $transaction_depth=0;
     private static bool $installing=false;
     private static string $migration_step='start';
@@ -55,7 +55,7 @@ final class Decka_DB {
     }
     public static function require_storage():void {
         if(!self::$installing&&!self::storage_ready())
-            throw new RuntimeException('Baza biletów nie została jeszcze przełączona na dect_. Administrator: Ustawienia → Baza danych → Napraw strukturę i ponów migrację.');
+            throw new RuntimeException('Baza biletów nie została jeszcze przełączona na dect_. Administrator: Ustawienia → System → Ponów migrację.');
     }
     public static function tx(callable $fn) {
         global $wpdb;self::query('START TRANSACTION');self::$transaction_depth++;
@@ -192,6 +192,33 @@ final class Decka_DB {
         update_option('decka_schema_version',self::SCHEMA_VERSION,false);
         if(!wp_next_scheduled('decka_maintenance'))wp_schedule_event(time()+60,'decka_minute','decka_maintenance');
     }
+    /** Keep the first order's retry key; only disambiguate later legacy collisions. */
+    private static function legacy_request_expression(string $source,string $target,array &$adjustments):string {
+        global $wpdb;
+        $columns=$wpdb->get_results("SHOW FULL COLUMNS FROM $target");$collations=[];
+        foreach($columns as $column)if(in_array($column->Field,['mode','request_key'],true))$collations[$column->Field]=$column->Collation;
+        $normalized=[];
+        foreach(['mode','request_key'] as $field){
+            $collation=$collations[$field]??'';$charset=explode('_',$collation)[0];
+            if(!preg_match('/^[a-z0-9_]+$/i',$collation)||!preg_match('/^[a-z0-9]+$/i',$charset))throw new Decka_Migration_Error('Nie można ustalić reguł porównywania kluczy zamówień.');
+            $normalized[$field]="CONVERT(a.`$field` USING $charset) COLLATE $collation";
+        }
+        $group="SELECT MIN(a.id) first_id,a.user_id,".$normalized['mode']." mode_key,".$normalized['request_key']." retry_key FROM $source a GROUP BY a.user_id,mode_key,retry_key HAVING COUNT(*)>1";
+        $join=$normalized['mode']." = g.mode_key AND ".$normalized['request_key']." = g.retry_key AND a.user_id=g.user_id AND a.id<>g.first_id";
+        // Compare with the destination collation, which can differ from the archive.
+        $ids=$wpdb->get_col("SELECT a.id FROM $source a JOIN ($group) g ON $join ORDER BY a.id");
+        if($wpdb->last_error)self::fail('query','orders');
+        if(!$ids)return 's.`request_key`';
+        $expression='CASE s.id';
+        foreach($ids as $id){
+            // Namespaced deterministic keys are stable across rolled-back retries.
+            $key=hash('sha256','dect-migration-request:v1:'.$wpdb->prefix.':'.$id);
+            $expression.=$wpdb->prepare(' WHEN %d THEN %s',(int)$id,$key);
+        }
+        $adjustments['request_keys']=count($ids);
+        // Any unexpected hash collision is still rejected by the unique index, atomically.
+        return $expression.' ELSE s.`request_key` END';
+    }
     private static function migrate_legacy():void {
         global $wpdb;
         self::$migration_step='source_inventory';self::$migration_table='';
@@ -213,8 +240,8 @@ final class Decka_DB {
         }
         if($sources&&count($sources)!==count($names))throw new Decka_Migration_Error('Brakuje starych tabel: '.implode(', ',array_diff($names,array_keys($sources))).'. Przywróć je z kopii bazy; niczego nie usunięto.');
         add_option('decka_storage_namespace','pending','','no');
-        $counts=[];
-        self::tx(function()use($wpdb,$names,$sources,$state,&$counts){
+        $counts=[];$adjustments=[];
+        self::tx(function()use($wpdb,$names,$sources,$state,&$counts,&$adjustments){
             self::$migration_step='check_target';
             foreach($names as $name){
                 self::$migration_table=$name;
@@ -231,11 +258,14 @@ final class Decka_DB {
                 // Lock source rows until the complete copy commits. Copy data only, never legacy indexes/triggers.
                 self::query("SELECT * FROM $source FOR UPDATE",$name);
                 $quoted=implode(',',array_map(fn($c)=>'`'.$c.'`',$common));
-                self::query("INSERT INTO $target ($quoted) SELECT $quoted FROM $source",$name);
+                $expressions=array_combine($common,array_map(fn($c)=>"s.`$c`",$common));
+                if($name==='orders'&&isset($expressions['request_key']))$expressions['request_key']=self::legacy_request_expression($source,$target,$adjustments);
+                $projection=implode(',',$expressions);
+                self::query("INSERT INTO $target ($quoted) SELECT $projection FROM $source s",$name);
                 if($wpdb->get_results('SHOW WARNINGS'))throw new Decka_Migration_Error('Konwersja danych w tabeli '.$name.' wymaga sprawdzenia. Migracja została wycofana.');
                 $primary=$name==='inventory'?['mode','event_id','seat_id']:['id'];
                 $join=implode(' AND ',array_map(fn($c)=>"s.`$c`=t.`$c`",$primary));
-                $same=implode(' AND ',array_map(fn($c)=>"s.`$c` <=> t.`$c`",$common));
+                $same=implode(' AND ',array_map(fn($c)=>"(".$expressions[$c].") <=> t.`$c`",$common));
                 if((int)$wpdb->get_var("SELECT COUNT(*) FROM $source s JOIN $target t ON $join WHERE NOT ($same)"))throw new Decka_Migration_Error('Niezgodność danych podczas migracji '.$name.'.');
                 $sourceCount=(int)$wpdb->get_var("SELECT COUNT(*) FROM $source");$targetCount=(int)$wpdb->get_var("SELECT COUNT(*) FROM $target");
                 if($sourceCount!==$targetCount)throw new Decka_Migration_Error('Niezgodna liczba rekordów podczas migracji '.$name.'.');
@@ -246,7 +276,7 @@ final class Decka_DB {
         });
         update_option('decka_storage_namespace','dect',false);
         wp_cache_delete('decka_storage_namespace','options');wp_cache_delete('alloptions','options');wp_cache_delete('notoptions','options');
-        update_option('decka_storage_migration',['completed_at'=>gmdate('c'),'source'=>'decka_','target'=>'dect_','rows'=>$counts,'legacy_preserved'=>true],false);
+        update_option('decka_storage_migration',['completed_at'=>gmdate('c'),'source'=>'decka_','target'=>'dect_','rows'=>$counts,'adjustments'=>$adjustments,'legacy_preserved'=>true],false);
     }
     public static function audit(string $action,int $id,string $detail=''):void {self::insert('audit',['actor'=>get_current_user_id(),'action'=>$action,'object_id'=>$id,'detail'=>$detail,'created_at'=>gmdate('Y-m-d H:i:s')]);}
     public static function settings():array{return (array)get_option('decka_settings',[]);}
