@@ -1,3 +1,10 @@
+## Wydanie 0.3.6
+
+- Migracja rozdziela kolizje `request_once` ze starej bazy, także wynikające z różnych reguł porównywania tekstu. Najstarsze zamówienie zachowuje dotychczasowy klucz ponowienia, kolejne otrzymują deterministyczne klucze techniczne. Identyfikatory zamówień, płatności, bilety i QR pozostają bez zmian; źródłowe tabele nie są modyfikowane. Raport podaje liczbę zmienionych kluczy. Każdy inny konflikt nadal bezpiecznie wycofuje całą migrację.
+- Ustawienia podzielono na siedem kategorii: Sprzedaż, Płatności, Konta kibiców, Bilety i e-mail, Portfele, Liga, System. Edycja pozostaje bezpośrednio na stronie, ze wspólnym przyciskiem zapisu. Zmiana zakładki zachowuje wpisane wartości.
+- W Ustawienia → System bieżący stan bazy i zalecane działanie są na górze. Historia, struktura tabel i JSON są schowane w szczegółach. Przycisk „Pobierz raport” zapisuje diagnostykę bez danych klientów i kluczy Stripe.
+- Przy niedokończonej migracji użyj „Ponów migrację”. „Sprawdź stan bazy” wykonuje wyłącznie diagnozę. Aktualizacje i zadania w tle mają oddzielne karty.
+
 # Decka Bilety 0.3.5
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.

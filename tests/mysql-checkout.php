@@ -82,6 +82,14 @@ $wpdb->query("UPDATE $oldOrders SET order_number=CONCAT('OLD-',id)");$wpdb->quer
 $old=$wpdb->suppress_errors(true);$legacy['request_key']=bin2hex(random_bytes(16));$legacy['legacy_required']=0;
 $duplicate=$wpdb->insert($oldOrders,$legacy);$diagnosis=Decka_DB::diagnose('insert','orders',$wpdb->last_error);$wpdb->suppress_errors($old);
 decka_check($duplicate===false&&$diagnosis['index']==='order_number','reported legacy order_number conflict reproduced');
+// Reproduce request_once collisions, including a source with case-sensitive keys.
+$wpdb->query("ALTER TABLE $oldOrders DROP INDEX request_once, MODIFY request_key varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL");
+$duplicateIds=[$again['order_id'],$legacyId];
+$wpdb->update($oldOrders,['request_key'=>'Legacy-Duplicate'],['id'=>$o['order_id']]);
+$wpdb->update($oldOrders,['request_key'=>'Legacy-Duplicate'],['id'=>$again['order_id']]);
+$wpdb->update($oldOrders,['request_key'=>'legacy-duplicate'],['id'=>$legacyId]);
+foreach($snapshots['orders'] as &$row){if((int)$row['id']===$o['order_id'])$row['request_key']='Legacy-Duplicate';elseif(in_array((int)$row['id'],$duplicateIds,true))$row['request_key']=(int)$row['id']===$legacyId?'legacy-duplicate':'Legacy-Duplicate';}unset($row);
+$legacySnapshot=$wpdb->get_results("SELECT * FROM $oldOrders ORDER BY id",ARRAY_A);
 $wpdb->query('DELETE FROM '.Decka_DB::table('state'));delete_option('decka_storage_namespace');update_option('decka_schema_version','0.3.2');
 $wpdb->query("ALTER TABLE {$wpdb->options} ENGINE=MyISAM");
 $blocked=false;try{Decka_DB::require_storage();}catch(RuntimeException $e){$blocked=true;}decka_check($blocked,'checkout blocked before complete migration');
@@ -109,6 +117,10 @@ decka_check(Decka_DB::storage_ready(),'committed marker keeps storage active whe
 Decka_DB::install();
 decka_check(get_option('decka_storage_namespace')==='dect','retry restores compatibility option without copying populated tables again');
 $wpdb->query("ALTER TABLE {$wpdb->options} ENGINE=InnoDB");
+$migration=get_option('decka_storage_migration');decka_check($migration['adjustments']['request_keys']===2,'migration resolves exact and destination-collation request_once collisions');
+decka_check($wpdb->get_results("SELECT * FROM $oldOrders ORDER BY id",ARRAY_A)===$legacySnapshot,'source orders remain byte-for-byte unchanged');
+foreach($snapshots['orders'] as &$row)if(in_array((int)$row['id'],$duplicateIds,true))$row['request_key']=hash('sha256','dect-migration-request:v1:'.$wpdb->prefix.':'.$row['id']);unset($row);
+decka_check($wpdb->get_var($wpdb->prepare('SELECT request_key FROM '.Decka_DB::table('orders').' WHERE id=%d',$o['order_id']))==='Legacy-Duplicate','oldest order preserves original retry key');
 foreach($tables as $table){
     $rows=$wpdb->get_results('SELECT * FROM '.Decka_DB::table($table),ARRAY_A);
     // Row order is not part of the database contract.
