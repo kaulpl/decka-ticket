@@ -16,7 +16,7 @@
 - W Ustawienia → System bieżący stan bazy i zalecane działanie są na górze. Historia, struktura tabel i JSON są schowane w szczegółach. Przycisk „Pobierz raport” zapisuje diagnostykę bez danych klientów i kluczy Stripe.
 - Przy niedokończonej migracji użyj „Ponów migrację”. „Sprawdź stan bazy” wykonuje wyłącznie diagnozę. Aktualizacje i zadania w tle mają oddzielne karty.
 
-# Decka Bilety 0.3.5
+# Decka Bilety 0.4.0
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
@@ -24,12 +24,12 @@ Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-
 
 1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.4.0.zip`. Aktywuj wtyczkę.
 2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
-3. Utwórz stronę **Bilety** z blokiem Krótki kod: `[decka_bilety]`.
-4. Skaner działa pod adresem **/bileter** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
+3. Sprzedaż działa bezpośrednio pod **/bilety/** bez nagłówka motywu. Nie trzeba tworzyć strony WordPress. Krótki kod `[decka_bilety]` pozostaje dostępny do osadzenia na innych stronach.
+4. Skaner działa pod adresem **/skaner/** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
 5. Ustaw w WordPressie politykę prywatności, a w **Decka Bilety → Ustawienia** adres regulaminu sprzedaży.
 6. Skonfiguruj niezawodną wysyłkę SMTP w WordPressie. PDF jest przekazywany do `wp_mail` jako załącznik; pozytywna odpowiedź oznacza przyjęcie przez system pocztowy, nie gwarancję doręczenia do skrzynki.
 7. Zapewnij wywoływanie WP-Cron co minutę przez harmonogram hostingu. Kolejka sprawdza płatności, zwalnia potwierdzone wygasłe sesje i wysyła bilety. Przycisk **Sprawdź płatności i kolejkę e-mail** pozwala uruchomić ją ręcznie. Na stronie bez ruchu sam WP-Cron może reagować z opóźnieniem.
-8. Wyłącz cache dla `wp-admin/admin-post.php?action=decka_app`, `wp-json/decka/v1/*` oraz pobierania PDF. Strony z krótkim kodem mogą być cache'owane, ale sam osadzony interfejs i API muszą pozostawać dynamiczne.
+8. Wyłącz cache stron/CDN dla `/bilety/`, `/skaner/`, `wp-admin/admin-post.php?action=decka_app`, `wp-json/decka/v1/*` oraz pobierania PDF. Strony z krótkim kodem mogą być cache'owane, ale sam osadzony interfejs i API muszą pozostawać dynamiczne.
 
 ## Stripe — test i produkcja
 
@@ -58,7 +58,7 @@ Potwierdzenie na stronie powrotu ze Stripe nie wystarcza do wystawienia biletu. 
 - Najpierw widać plan hali z kropkami; kliknięcie sektora otwiera widok z numerami. Na małym telefonie powiększony sektor można przesuwać poziomo.
 - Klient widzi tylko wolne i zajęte miejsca oraz swój wybór. Panel klubu zachowuje osobne kolory opłaconych, oczekujących, voucherów i blokad.
 - Dostępność odświeża się co 8 sekund, a serwer sprawdza ją ponownie podczas zakupu. Brak połączenia wyłącza możliwość wyboru.
-- Maksymalnie 10 miejsc w jednym zamówieniu. Wybór w koszyku nie blokuje miejsc; blokada następuje przy tworzeniu płatności po zalogowaniu.
+- Maksymalnie 10 miejsc w jednym zamówieniu. Wybór w koszyku nie blokuje miejsc; blokada następuje przy tworzeniu płatności po podaniu danych gościa lub zalogowaniu.
 - Sesja Checkout trwa około **31 minut**. Miejsce jest zwalniane dopiero po potwierdzeniu wygaśnięcia/anulowania przez Stripe, a nie po samym upływie lokalnego zegara. Przy niejednoznacznym błędzie sieci blokada pozostaje, a wtyczka ponawia zapytanie z tym samym kluczem operacji.
 
 ## Mecze i rozpoczęcie sprzedaży
