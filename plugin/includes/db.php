@@ -55,7 +55,7 @@ final class Decka_DB {
     }
     public static function require_storage():void {
         if(!self::$installing&&!self::storage_ready())
-            throw new RuntimeException('Baza biletów nie została jeszcze przełączona na dect_. Administrator: Ustawienia → Baza danych → Sprawdź i uzupełnij strukturę bazy.');
+            throw new RuntimeException('Baza biletów nie została jeszcze przełączona na dect_. Administrator: Ustawienia → Baza danych → Napraw strukturę i ponów migrację.');
     }
     public static function tx(callable $fn) {
         global $wpdb;self::query('START TRANSACTION');self::$transaction_depth++;

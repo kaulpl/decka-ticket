@@ -104,6 +104,10 @@ $wpdb->query('DELETE FROM '.Decka_DB::table('audit'));
 Decka_DB::install();$wpdb->flush();$wpdb->col_meta=[];
 decka_check(get_option('decka_storage_namespace')==='dect','migration activates dect namespace with MyISAM WordPress options');
 decka_check($wpdb->get_var('SELECT value FROM '.Decka_DB::table('state')." WHERE name='namespace'")==='dect','migration marker committed inside own InnoDB table');
+delete_option('decka_storage_namespace');
+decka_check(Decka_DB::storage_ready(),'committed marker keeps storage active when compatibility option is missing');
+Decka_DB::install();
+decka_check(get_option('decka_storage_namespace')==='dect','retry restores compatibility option without copying populated tables again');
 $wpdb->query("ALTER TABLE {$wpdb->options} ENGINE=InnoDB");
 foreach($tables as $table){
     $rows=$wpdb->get_results('SELECT * FROM '.Decka_DB::table($table),ARRAY_A);
