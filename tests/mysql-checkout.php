@@ -242,8 +242,20 @@ wp_set_current_user(1);$admin=get_user_by('id',1);Decka_Admin_API::action(['oper
 decka_check(current_user_can('manage_options')&&!current_user_can('decka_scan'),'remove scanner access from admin without removing administration');Decka_Admin_API::action(['operation'=>'gate_access','email'=>$admin->user_email,'enabled'=>true]);decka_check(current_user_can('decka_scan'),'administrator scanner access can be restored');
 
 // Registration and profile completion use authenticated REST nonces and private metadata.
-wp_set_current_user(0);$registration=new WP_REST_Request('POST','/decka/v1/register');$registration->set_header('origin',home_url());$registration->set_header('content-type','application/json');$registration->set_body(wp_json_encode($profile+['email'=>'registered-ci@example.test','password'=>'CI-Test-Password-12345','auth_nonce'=>wp_create_nonce('decka_auth')]));
+wp_set_current_user(0);$registration=new WP_REST_Request('POST','/decka/v1/register');$registration->set_header('origin',home_url());$registration->set_header('content-type','application/json');$registration->set_body(wp_json_encode($profile+['email'=>'registered-ci@example.test','password'=>'Abc12345','auth_nonce'=>wp_create_nonce('decka_auth')]));
 $response=rest_do_request($registration);decka_check($response->get_status()===200,'full registration form succeeds through REST');$registeredUid=get_current_user_id();decka_check($registeredUid>0&&Decka_Profile::read($registeredUid)['house_number']==='5A','registration stores address under authenticated fan');
 $public=Decka_API::catalog();decka_check(!str_contains(wp_json_encode($public),'registered-ci@example.test'),'public catalog does not expose profile details');
 
 $lookup=Decka_Admin_API::tickets(['q'=>$detail['items'][0]['ticket_number']]);decka_check(count($lookup['rows'])===1&&$lookup['rows'][0]['ticket_number']===$detail['items'][0]['ticket_number'],'ticket number can be searched in administration');
+
+// Global hall macros protect orders, apply to future games and remain private to administration.
+wp_set_current_user(1);$freeSeat=null;foreach(Decka_DB::seats()['seats'] as $seat)if(!$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM '.Decka_DB::table('inventory').' WHERE seat_id=%s',$seat['id']))){$freeSeat=$seat['id'];break;}
+Decka_Admin_API::action(['operation'=>'seat_hidden','seats'=>[$freeSeat],'event_id'=>0]);
+$av=Decka_API::availability((string)$event);$hidden=array_values(array_filter($av['seats'],fn($s)=>$s['seat_id']===$freeSeat));decka_check(count($hidden)>0&&$hidden[0]['state']==='hidden','global hidden seat exposed without buyer data');
+decka_check(!str_contains(wp_json_encode($av),'@'),'public availability contains no customer email');
+$macro=$wpdb->get_var($wpdb->prepare('SELECT state FROM '.Decka_DB::table('inventory').' WHERE event_id=0 AND mode=%s AND seat_id=%s',Decka_DB::mode(),$freeSeat));decka_check($macro==='hidden','macro persists for future matches');
+Decka_Admin_API::action(['operation'=>'seat_camera','seats'=>[$freeSeat],'event_id'=>0]);decka_check($wpdb->get_var($wpdb->prepare('SELECT state FROM '.Decka_DB::table('inventory').' WHERE event_id=0 AND mode=%s AND seat_id=%s',Decka_DB::mode(),$freeSeat))==='camera','macro changes from hidden to camera');
+Decka_Admin_API::action(['operation'=>'seat_release','seats'=>[$freeSeat],'event_id'=>0]);decka_check(!(int)$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM '.Decka_DB::table('inventory').' WHERE mode=%s AND seat_id=%s',Decka_DB::mode(),$freeSeat)),'release removes global and existing match macros');
+$protected=$detail['items'][0]['seat_id'];$failed=false;try{Decka_Admin_API::action(['operation'=>'seat_hidden','seats'=>[$protected],'event_id'=>0]);}catch(RuntimeException $e){$failed=true;}decka_check($failed,'global hiding cannot conceal an issued ticket');
+$lookup=Decka_Admin_API::orders(['q'=>Decka_Service::number(Decka_Service::order($guest['order_id']))]);decka_check(count($lookup['rows'])===1,'random order number searchable without exposing idempotency keys');
+$number=Decka_Service::number(Decka_Service::order($guest['order_id']));decka_check(!array_key_exists('request_key',$lookup['rows'][0])&&$lookup['rows'][0]['number']===$number,'order response keeps random number and omits request key');

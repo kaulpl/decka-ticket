@@ -5,7 +5,7 @@
 define('ARRAY_A','ARRAY_A');define('DECKA_DIR',__DIR__.'/../plugin/');
 define('K_PATH_CACHE',__DIR__.'/artifacts/');@mkdir(K_PATH_CACHE,0777,true);
 $settings=['mode'=>'test','normal'=>2500,'reduced'=>1500];$uid=7;$checks=0;
-function get_option($name,$default=[]){global $settings;if($name==='decka_storage_namespace')return 'dect';return $settings;}
+function get_option($name,$default=[]){global $settings;if($name==='decka_storage_namespace')return 'dect';if($name==='decka_settings')return $settings;return $GLOBALS['options'][$name]??$default;}
 function get_current_user_id(){global $uid;return $uid;}
 function wp_get_current_user(){global $uid;return (object)['user_email'=>'kibic'.$uid.'@example.test'];}
 function home_url($path=''){return 'https://example.test'.$path;}
@@ -27,13 +27,14 @@ class DB {
  function query($sql){return $this->pdo->exec($this->rewrite($sql));}
  function get_row($sql,$mode=null){return $this->pdo->query($this->rewrite($sql))->fetch($mode===ARRAY_A?PDO::FETCH_ASSOC:PDO::FETCH_OBJ)?:null;}
  function get_results($sql,$mode=null){return $this->pdo->query($this->rewrite($sql))->fetchAll($mode===ARRAY_A?PDO::FETCH_ASSOC:PDO::FETCH_OBJ);}
- function get_var($sql){$value=$this->pdo->query($this->rewrite($sql))->fetchColumn();return $value===false?null:$value;}
+ function get_var($sql){if(str_contains($sql,'GET_LOCK(')||str_contains($sql,'RELEASE_LOCK('))return 1;$value=$this->pdo->query($this->rewrite($sql))->fetchColumn();return $value===false?null:$value;}
  function insert($table,$data){$keys=array_keys($data);$s=$this->pdo->prepare("INSERT INTO $table (".implode(',',$keys).') VALUES ('.implode(',',array_fill(0,count($keys),'?')).')');$s->execute(array_values($data));$this->insert_id=(int)$this->pdo->lastInsertId();return $s->rowCount();}
  function update($table,$data,$where){$keys=array_keys($data);$w=array_keys($where);$s=$this->pdo->prepare("UPDATE $table SET ".implode(',',array_map(fn($k)=>"$k=?",$keys)).' WHERE '.implode(' AND ',array_map(fn($k)=>"$k=?",$w)));$s->execute(array_merge(array_values($data),array_values($where)));return $s->rowCount();}
 }
 class Decka_Stripe {
  static function secret($mode,$kind='secret'){return 'local-test-only';}
- static array $sessions=[];
+ static array $sessions=[];static bool $expireFails=false;static bool $payOnExpire=false;
+ static function request($mode,$method,$path){preg_match('/cs_test_(\d+)/',$path,$m);$id=(int)$m[1];if($method==='POST'){if(self::$payOnExpire){self::$sessions[$id]['status']='complete';self::$sessions[$id]['payment_status']='paid';throw new RuntimeException('Already completed');}if(self::$expireFails)throw new RuntimeException('Network failure');self::$sessions[$id]['status']='expired';}return self::$sessions[$id];}
  static function create($o){$p=json_decode($o->stripe_payload,true);return self::$sessions[$o->id]??=['id'=>'cs_test_'.$o->id,'url'=>'https://checkout.stripe.com/test','metadata'=>$p['metadata'],'client_reference_id'=>(string)$o->id,'livemode'=>false,'amount_total'=>(int)$o->total,'currency'=>'pln','payment_status'=>'unpaid','status'=>'open','payment_intent'=>'pi_'.$o->id];}
 }
 $wpdb=new DB;
@@ -104,4 +105,17 @@ if(file_exists(get_attached_file(1)))$wpdb->query('UPDATE wp_dect_events SET ima
 @mkdir(__DIR__.'/artifacts',0777,true);file_put_contents(__DIR__.'/artifacts/package-TEST.pdf',Decka_Tickets::pdf($pack['order_id']));
 $pdf=Decka_Tickets::pdf($voucher['order_id']);@mkdir(__DIR__.'/artifacts',0777,true);check(file_put_contents(__DIR__.'/artifacts/voucher-TEST.pdf',$pdf)!==false,'PDF zapisany do pliku');check(str_starts_with($pdf,'%PDF-'),'generowany rzeczywisty bilet PDF');
 file_put_contents(__DIR__.'/expected-qr.txt',Decka_Domain::token($wpdb->get_row('SELECT * FROM wp_dect_tickets WHERE order_id='.$voucher['order_id']),wp_salt('secure_auth')));
+
+$uid=999;$settings['max_per_fan']=10;$settings['purchase_interval']=0;
+$timed=buy(100);$o=Decka_Service::order($timed['order_id']);Decka_Service::refresh_payment($o);check(Decka_Service::order($o->id)->status==='pending','rezerwacja przed 10 minutami pozostaje aktywna');
+Decka_DB::update('orders',['created_at'=>gmdate('Y-m-d H:i:s',time()-601)],['id'=>$o->id]);$o=Decka_Service::order($o->id);Decka_Stripe::$expireFails=true;rejects(fn()=>Decka_Service::refresh_payment($o),'błąd Stripe nie udaje potwierdzonego wygaśnięcia');check((int)$wpdb->get_var('SELECT COUNT(*) FROM wp_dect_inventory WHERE order_id='.$o->id)===1,'niejednoznaczna płatność nadal chroni miejsce');Decka_Stripe::$expireFails=false;Decka_Service::refresh_payment($o);check(Decka_Service::order($o->id)->status==='expired','po 10 minutach zamykamy płatność i ustawiamy nieopłacono');check((int)$wpdb->get_var('SELECT COUNT(*) FROM wp_dect_inventory WHERE order_id='.$o->id)===0,'potwierdzona sesja expired zwalnia miejsce');
+$race=buy(101);Decka_DB::update('orders',['created_at'=>gmdate('Y-m-d H:i:s',time()-601)],['id'=>$race['order_id']]);Decka_Stripe::$payOnExpire=true;Decka_Service::refresh_payment(Decka_Service::order($race['order_id']));Decka_Stripe::$payOnExpire=false;check(Decka_Service::order($race['order_id'])->status==='paid','płatność wygrywająca wyścig z wygaszaniem wydaje bilet');
+foreach(['hidden','camera','blocked'] as $i=>$state){Decka_DB::insert('inventory',['mode'=>'test','event_id'=>0,'seat_id'=>(string)(102+$i),'order_id'=>0,'state'=>$state]);rejects(fn()=>buy(102+$i),'globalny stan '.$state.' blokuje zakup');}
+$settings['purchase_interval']=20;rejects(fn()=>buy(105),'odstęp czasowy blokuje kolejne zamówienie tego kibica na mecz');$uid=1000;check(buy(105)['status']==='pending','odstęp nie blokuje innego kibica');$settings['purchase_interval']=0;
+Decka_DB::insert('promos',['id'=>2,'code'=>'PAKIET20','type'=>'percent','value'=>20,'max_uses'=>0,'event_ids'=>'[]','active'=>1]);
+$input=['event_id'=>1,'offer_id'=>1,'promo'=>'PAKIET20','seats'=>[['id'=>'106','kind'=>'normal']],'package_ack'=>true];rejects(fn()=>Decka_Service::quote($input),'niezaznaczony kod odrzucony w podglądzie pakietu');rejects(fn()=>buy(106,1,$input),'niezaznaczony kod odrzucony przy zakupie pakietu');$GLOBALS['options']['decka_offer_promos_1']=[2];$quote=Decka_Service::quote($input);$purchase=buy(106,1,$input);check($quote['total']===$purchase['total']&&$quote['percent']===20.0,'podgląd rabatu zgodny z ceną Stripe');
+$n=Decka_Service::number(Decka_Service::order($purchase['order_id']));check(preg_match('/^Z-[A-F0-9]{16}$/',$n)===1&&$n===Decka_Service::number(Decka_Service::order($purchase['order_id'])),'losowy numer zamówienia jest stabilny');
+$ticketId=(int)$wpdb->get_var('SELECT id FROM wp_dect_tickets WHERE order_id='.$race['order_id']);check(preg_match('/^DK-[A-F0-9]{16}$/',Decka_Tickets::number($ticketId))===1,'numer biletu jest losowym ciągiem znaków');
+$until=time()+600;$sig=hash_hmac('sha256','pdf|'.$race['order_id'].'|'.$until,wp_salt('secure_auth'));check(Decka_Tickets::download_signature($race['order_id'],$until,$sig),'podpis pobierania nie zależy od zmiany sesji logowania');check(!Decka_Tickets::download_signature($race['order_id']+1,$until,$sig),'podpis nie otwiera innego zamówienia');check(!Decka_Tickets::download_signature($race['order_id'],time()-1,$sig),'wygasły podpis PDF jest odrzucany');
+file_put_contents(__DIR__.'/expected-barcode.txt',Decka_Tickets::number((int)$wpdb->get_var('SELECT MIN(id) FROM wp_dect_tickets WHERE order_id='.$voucher['order_id'])));
 echo "TOTAL $checks integration checks (SQLite adapter, fake Stripe)\n";
