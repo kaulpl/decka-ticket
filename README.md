@@ -1,3 +1,7 @@
+## Wydanie 0.5.1
+
+Diagnostyka Stripe akceptuje końcowy ukośnik adresu webhooka i przeszukuje kolejne strony listy endpointów. Rozróżnia brak adresu, wyłączony webhook i brakujące zdarzenia, podając konkretne informacje do poprawy w Stripe. Nadal wymaga jednego aktywnego endpointu ze wszystkimi zdarzeniami; nie łączy konfiguracji endpointów o różnych sekretach.
+
 ## Wydanie 0.5.0
 
 - Google loguje istniejące połączone konto; zweryfikowane adresy Gmail/Workspace łączą się z istniejącym kontem bez hasła. Dla adresu spoza hostingu Google pierwsze połączenie wymaga jednorazowego linku e-mail w tej samej przeglądarce. Podpis, wystawca, odbiorca, nonce, state i PKCE nadal są weryfikowane. Źródło zasad zaufania: https://developers.google.com/identity/sign-in/web/backend-auth.
