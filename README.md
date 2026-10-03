@@ -1,3 +1,21 @@
+## Wydanie 0.7.0
+
+- Naprawiono adres „Aktualizuj teraz”: parametry i nonce aktualizacji są przekazywane jako URL, bez kodowania HTML `&amp;`. Jeżeli masz jeszcze starszą wersję z uszkodzonym przyciskiem, aktualizuj przez **WordPress → Wtyczki → Zainstalowane wtyczki → Decka Bilety → Aktualizuj teraz** albo wgraj ZIP nowego wydania.
+- Moje konto: zamówienia rozwijane, nagłówek z przeciwnikiem, datą i statusem. Po rozwinięciu miejsca, bilety i pobieranie PDF.
+- Administracyjny plan hali: wolne miejsca jasnoniebieskie, zaznaczone ciemnoniebieskie. Kliknięcie myszą nie dodaje obramowania; obsługa klawiatury zachowuje widoczny fokus.
+- Ustawienia → Płatności: osobne rozwijane sekcje Stripe i PayU oraz wybór operatora nowych zamówień. Rozpoczęte płatności zachowują operatora. Nie ma nowej migracji tabel.
+
+### Konfiguracja PayU Europe
+
+1. Utwórz punkt płatności **REST API** w PayU i włącz automatyczne odbieranie płatności.
+2. W sekcji PayU wpisz **POS ID, OAuth Client ID, OAuth Client secret i drugi klucz (MD5)**. Sandbox i produkcja mają oddzielne pola; sekrety są szyfrowane w bazie i nie wracają do przeglądarki.
+3. Wybierz PayU jako aktywnego operatora, wybierz środowisko w Sprzedaży i zapisz. Przycisk sprawdzania weryfikuje OAuth zapisanej konfiguracji; nie potwierdza poprawności drugiego klucza ani faktycznej płatności.
+4. Publiczny adres powiadomień `/wp-json/decka/v1/payu/webhook/test` lub `/live` wtyczka przekazuje w każdym zamówieniu. Wyklucz go z cache i blokad logowania/WAF. Bilety wydawane są po zweryfikowaniu podpisu i statusu **COMPLETED** przez API; powrót przeglądarki sam nie potwierdza zapłaty.
+5. Wykonaj zakup w sandbox: płatność, e-mail/PDF, ponowione powiadomienie, anulowanie i zwrot w panelu PayU. Powiadomienie o sfinalizowanym zwrocie (także częściowym) unieważnia całe zamówienie; miejsca pozostają zablokowane do decyzji administratora. Wtyczka nie inicjuje zwrotu pieniędzy.
+6. Rezerwacja trwa 10 minut. Miejsca są zwalniane po potwierdzeniu anulowania przez PayU. Przy awarii API lub niejednoznacznym utworzeniu płatności blokada pozostaje do potwierdzenia operatora; identyfikator zewnętrzny nie jest zmieniany przy ponowieniu. Hosting powinien uruchamiać zadania WordPress co minutę.
+
+Integracja zweryfikowana lokalnymi odpowiedziami testowymi; odbiór na koncie PayU klubu pozostaje konieczny. Dokumentacja: [tworzenie płatności](https://developers.payu.com/europe/docs/payment-flows/auth-and-order/), [powiadomienia](https://developers.payu.com/europe/docs/payment-flows/lifecycle/), [zwroty](https://developers.payu.com/europe/docs/payment-flows/refunds/).
+
 ## Wydanie 0.5.1
 
 Diagnostyka Stripe akceptuje końcowy ukośnik adresu webhooka i przeszukuje kolejne strony listy endpointów. Rozróżnia brak adresu, wyłączony webhook i brakujące zdarzenia, podając konkretne informacje do poprawy w Stripe. Nadal wymaga jednego aktywnego endpointu ze wszystkimi zdarzeniami; nie łączy konfiguracji endpointów o różnych sekretach.
@@ -31,13 +49,13 @@ Diagnostyka Stripe akceptuje końcowy ukośnik adresu webhooka i przeszukuje kol
 - W Ustawienia → System bieżący stan bazy i zalecane działanie są na górze. Historia, struktura tabel i JSON są schowane w szczegółach. Przycisk „Pobierz raport” zapisuje diagnostykę bez danych klientów i kluczy Stripe.
 - Przy niedokończonej migracji użyj „Ponów migrację”. „Sprawdź stan bazy” wykonuje wyłącznie diagnozę. Aktualizacje i zadania w tle mają oddzielne karty.
 
-# Decka Bilety 0.5.0
+# Decka Bilety 0.7.0
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
-1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.5.0.zip`. Aktywuj wtyczkę.
+1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.7.0.zip`. Aktywuj wtyczkę.
 2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
 3. Sprzedaż działa bezpośrednio pod **/bilety/** bez nagłówka motywu. Nie trzeba tworzyć strony WordPress. Krótki kod `[decka_bilety]` pozostaje dostępny do osadzenia na innych stronach.
 4. Skaner działa pod adresem **/skaner/** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.

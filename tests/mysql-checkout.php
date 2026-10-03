@@ -259,3 +259,20 @@ Decka_Admin_API::action(['operation'=>'seat_release','seats'=>[$freeSeat],'event
 $protected=$detail['items'][0]['seat_id'];$failed=false;try{Decka_Admin_API::action(['operation'=>'seat_hidden','seats'=>[$protected],'event_id'=>0]);}catch(RuntimeException $e){$failed=true;}decka_check($failed,'global hiding cannot conceal an issued ticket');
 $lookup=Decka_Admin_API::orders(['q'=>Decka_Service::number(Decka_Service::order($guest['order_id']))]);decka_check(count($lookup['rows'])===1,'random order number searchable without exposing idempotency keys');
 $number=Decka_Service::number(Decka_Service::order($guest['order_id']));decka_check(!array_key_exists('request_key',$lookup['rows'][0])&&$lookup['rows'][0]['number']===$number,'order response keeps random number and omits request key');
+
+// Native WordPress URL construction must preserve parameters outside HTML.
+$updaterCache=(new ReflectionClass(Decka_Updater::class))->getConstant('CACHE');
+set_site_transient($updaterCache,['status'=>'available','version'=>'99.0.0']);$url=Decka_Updater::status()['install_url'];parse_str(wp_parse_url($url,PHP_URL_QUERY),$query);
+decka_check(($query['action']??'')==='upgrade-plugin'&&($query['plugin']??'')===plugin_basename(DECKA_FILE)&&wp_verify_nonce($query['_wpnonce']??'','upgrade-plugin_'.plugin_basename(DECKA_FILE)),'native WordPress installation URL preserves plugin and valid nonce');delete_site_transient($updaterCache);
+// Real encrypted settings, REST signature verification and strict database with fake PayU HTTP.
+$settings=Decka_DB::settings();$settings['payment_provider']='payu';$settings['mode']='test';$settings['purchase_interval']=0;
+foreach(['pos_id'=>'123','client_id'=>'456','client_secret'=>'payu-ci-secret','second_key'=>'payu-ci-second'] as $k=>$v)$settings['payu_test_'.$k]=in_array($k,['client_secret','second_key'])?Decka_Stripe::encrypt($v):$v;
+update_option('decka_settings',$settings);$safe=Decka_Admin_API::settings();decka_check(!str_contains(wp_json_encode($safe),'payu-ci-secret')&&!str_contains(wp_json_encode($safe),'payu-ci-second'),'PayU secrets never exposed in admin bootstrap');
+$payuPayment=[];$payuFilter=function($pre,$args,$url)use(&$payuPayment){if(!str_starts_with($url,'https://secure.snd.payu.com/'))return $pre;
+ if(str_contains($url,'oauth/authorize'))$body=['access_token'=>'fixture-token','expires_in'=>3600];
+ elseif($args['method']==='POST'){$payuPayment=json_decode($args['body'],true)+['orderId'=>'PAYUCI1','status'=>'PENDING'];$body=['status'=>['statusCode'=>'SUCCESS'],'orderId'=>'PAYUCI1','redirectUri'=>'https://secure.snd.payu.com/pay?order=PAYUCI1'];}
+ else $body=['orders'=>[$payuPayment],'status'=>['statusCode'=>'SUCCESS']];return ['response'=>['code'=>str_contains($url,'/api/v2_1/')&&$args['method']==='POST'?302:200],'headers'=>[],'cookies'=>[],'body'=>wp_json_encode($body)];};
+add_filter('pre_http_request',$payuFilter,1,3);$payuEvent=Decka_DB::insert('events',['opponent'=>'PayU CI','starts_at'=>gmdate('Y-m-d H:i:s',time()+86400),'sale_open'=>1,'updated_at'=>gmdate('Y-m-d H:i:s')]);
+$po=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$payuEvent,'seats'=>[['id'=>$freeSeat,'kind'=>'normal']]]);decka_check($po['status']==='pending'&&Decka_Service::provider(Decka_Service::order($po['order_id']))==='payu','strict database checkout creates PayU payment');
+$payuPayment['status']='COMPLETED';$raw=wp_json_encode(['order'=>$payuPayment]);$request=new WP_REST_Request('POST','/decka/v1/payu/webhook/test');$request->set_body($raw);$request->set_header('OpenPayu-Signature','signature='.md5($raw.'payu-ci-second').';algorithm=MD5');
+$reply=rest_do_request($request);decka_check($reply->get_status()===200&&Decka_Service::order($po['order_id'])->status==='paid','signed PayU REST webhook issues ticket on strict database');rest_do_request($request);decka_check((int)$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM '.Decka_DB::table('tickets').' WHERE order_id=%d',$po['order_id']))===1,'PayU duplicate REST notification does not duplicate ticket');remove_filter('pre_http_request',$payuFilter,1);
