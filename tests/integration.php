@@ -32,6 +32,7 @@ class DB {
  function update($table,$data,$where){$keys=array_keys($data);$w=array_keys($where);$s=$this->pdo->prepare("UPDATE $table SET ".implode(',',array_map(fn($k)=>"$k=?",$keys)).' WHERE '.implode(' AND ',array_map(fn($k)=>"$k=?",$w)));$s->execute(array_merge(array_values($data),array_values($where)));return $s->rowCount();}
 }
 class Decka_Stripe {
+ static function encrypt($v){return base64_encode($v);}static function decrypt($v){return base64_decode($v);}
  static function secret($mode,$kind='secret'){return 'local-test-only';}
  static array $sessions=[];static bool $expireFails=false;static bool $payOnExpire=false;
  static function request($mode,$method,$path){preg_match('/cs_test_(\d+)/',$path,$m);$id=(int)$m[1];if($method==='POST'){if(self::$payOnExpire){self::$sessions[$id]['status']='complete';self::$sessions[$id]['payment_status']='paid';throw new RuntimeException('Already completed');}if(self::$expireFails)throw new RuntimeException('Network failure');self::$sessions[$id]['status']='expired';}return self::$sessions[$id];}

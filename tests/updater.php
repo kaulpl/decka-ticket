@@ -6,6 +6,8 @@ define('ABSPATH',sys_get_temp_dir().'/decka-updater-test/');
 $cache=[];$calls=0;$allowed=true;$cleaned=false;$updated=false;$http=[];$download='correct archive';$count=0;
 class WP_Error{function __construct(public $code,public $message){}}
 class Decka_DB{static function storage_ready(){return true;}static function audit(...$a){}}
+function wp_create_nonce($action){return 'test-nonce';}
+function add_query_arg($args,$url){return $url.'?'.http_build_query($args,'','&',PHP_QUERY_RFC3986);}
 function wp_nonce_url($url,$action){return $url.'&_wpnonce=test-nonce';}
 function plugin_basename($f){return $f;}function sanitize_textarea_field($s){return strip_tags($s);}function self_admin_url($s){return 'https://example.test/'.$s;}
 function get_site_transient($k){global $cache;return $cache[$k]??false;}function set_site_transient($k,$v,$ttl=0){global $cache;$cache[$k]=$v;}function delete_site_transient($k){global $cache;unset($cache[$k]);}
@@ -26,6 +28,7 @@ $api='https://api.github.com/repos/kaulpl/decka-ticket/releases/latest';$http[$a
 ok(Decka_Updater::check(true)['status']==='available','new release available');$n=$calls;Decka_Updater::check();ok($calls===$n,'normal reads use release cache');
 $cache['unrelated_page_cache']='keep';$r=Decka_Updater::force();ok($cleaned&&$updated&&$calls===$n+2,'manual check clears and refetches immediately');ok(isset($cache['update_plugins']->response[DECKA_FILE]),'WordPress receives update');ok(isset($cache['update_plugins']->response['other/other.php']),'other plugin update retained');ok($cache['unrelated_page_cache']==='keep','page cache unchanged');
 ok(str_contains($r['install_url'],'upgrade-plugin')&&str_contains($r['install_url'],'_wpnonce='),'installation link uses native WordPress upgrader and nonce');
+parse_str(parse_url($r['install_url'],PHP_URL_QUERY),$query);ok(($query['action']??'')==='upgrade-plugin'&&($query['plugin']??'')===DECKA_FILE&&($query['_wpnonce']??'')==='test-nonce'&&!str_contains($r['install_url'],'&amp;'),'JSON installation URL keeps real query separators');
 $allowed=false;ok(Decka_Updater::status()['install_url']===null,'installation link hidden without permission');rejects(fn()=>Decka_Updater::force(),'requires update_plugins permission');$allowed=true;
 rejects(fn()=>Decka_Updater::validate($release+['prerelease'=>true],$manifest),'rejects prerelease');rejects(fn()=>Decka_Updater::validate($release,array_merge($manifest,['version'=>'0.4.0'])),'rejects mismatch');rejects(fn()=>Decka_Updater::validate($release,array_merge($manifest,['sha256'=>'bad'])),'rejects missing checksum');rejects(fn()=>Decka_Updater::validate(array_merge($release,['assets'=>[]]),$manifest),'rejects source-only release');
 $bad=$release;$bad['assets'][0]['browser_download_url']='https://evil.example/file.zip';rejects(fn()=>Decka_Updater::validate($bad,$manifest),'rejects foreign asset');

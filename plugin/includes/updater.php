@@ -55,7 +55,7 @@ final class Decka_Updater {
     public static function status():array {
         $s=get_site_transient(self::CACHE);$s=is_array($s)?$s:['installed'=>DECKA_VERSION,'repository'=>self::REPO,'status'=>'unchecked','checked_at'=>null,'message'=>'Nie sprawdzono jeszcze repozytorium.'];
         $s['installed']=DECKA_VERSION;
-        $s['install_url']=current_user_can('update_plugins')&&($s['status']??'')==='available'?wp_nonce_url(self_admin_url('update.php?action=upgrade-plugin&plugin='.rawurlencode(self::file())),'upgrade-plugin_'.self::file()):null;
+        $s['install_url']=current_user_can('update_plugins')&&($s['status']??'')==='available'?add_query_arg(['action'=>'upgrade-plugin','plugin'=>self::file(),'_wpnonce'=>wp_create_nonce('upgrade-plugin_'.self::file())],self_admin_url('update.php')):null;
         $s['manage_url']=current_user_can('update_plugins')?self_admin_url('plugins.php'):null;
         return $s;
     }

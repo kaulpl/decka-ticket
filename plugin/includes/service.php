@@ -1,5 +1,6 @@
 <?php
 final class Decka_Service {
+    public static function provider(object $o):string {return (json_decode($o->stripe_payload??'',true)['provider']??'stripe')==='payu'?'payu':'stripe';}
     public static function number(object $o):string {return 'Z-'.strtoupper(substr(hash('sha256',$o->mode.'|'.$o->id.'|'.$o->request_key),0,16));}
     public static function order(int $id):?object{global $wpdb;return $wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('orders').' WHERE id=%d',$id));}
     public static function create(array $input,bool $voucher=false,string $guestHash=''):array {
@@ -48,7 +49,7 @@ final class Decka_Service {
                 $remaining=$total;foreach($raw as $i=>&$item){$item['amount']=$i===count($raw)-1?$remaining:(int)floor($before?$item['amount']*$total/$before:0);$remaining-=$item['amount'];}unset($item);
             }
             if(!$voucher && $total>0 && $total<200)throw new RuntimeException('Po rabacie zamówienie musi wynosić co najmniej 2 zł albo 0 zł.');
-            if($total>0 && (!Decka_Stripe::secret($mode)||!Decka_Stripe::secret($mode,'webhook')))throw new RuntimeException('Płatności nie są jeszcze skonfigurowane. Skontaktuj się z klubem.');
+            if($total>0 && (($settings['payment_provider']??'stripe')==='payu'?!Decka_Payu::ready($mode):(!Decka_Stripe::secret($mode)||!Decka_Stripe::secret($mode,'webhook'))))throw new RuntimeException('Płatności nie są jeszcze skonfigurowane. Skontaktuj się z klubem.');
             $oid=Decka_DB::insert('orders',['mode'=>$mode,'user_id'=>$uid,'request_key'=>$key,'email'=>$email,'status'=>'creating','session_id'=>null,'payment_id'=>null,'total'=>$total,'discount'=>$before-$total,'offer_id'=>$offer_id?:null,'promo_id'=>$promo?$promo->id:null,'created_at'=>$now,'package_ack'=>$offer?'schedule-v1':null]+$buyer);
             foreach($raw as $item){
                 $occupied=$wpdb->get_var($wpdb->prepare('SELECT order_id FROM '.Decka_DB::table('inventory').' WHERE mode=%s AND event_id IN (0,%d) AND seat_id=%s LIMIT 1',$mode,$item['event_id'],$item['seat_id']));
@@ -59,7 +60,7 @@ final class Decka_Service {
             if($total===0){self::issue_locked($oid,$voucher?'voucher':'free');if($voucher)Decka_DB::audit('voucher',$oid,$email);return $oid;}
             $base=home_url('/bilety/?');
             $payload=['mode'=>'payment','locale'=>'pl','customer_email'=>$email,'client_reference_id'=>(string)$oid,'metadata'=>['decka_order'=>(string)$oid,'decka_mode'=>$mode], 'payment_intent_data'=>['metadata'=>['decka_order'=>(string)$oid]],'payment_method_types'=>['card','blik'],'success_url'=>$base.'order='.$oid,'cancel_url'=>$base.'order='.$oid.'&cancel=1','expires_at'=>time()+1860,'line_items'=>[['price_data'=>['currency'=>'pln','unit_amount'=>$total,'product_data'=>['name'=>'Decka Pelplin — '.($offer?$offer->name:'bilety').' ('.count($raw).' wejść)']],'quantity'=>1]]];
-            Decka_DB::update('orders',['stripe_payload'=>wp_json_encode($payload)],['id'=>$oid]);
+            if(($settings['payment_provider']??'stripe')==='payu')$payload=Decka_Payu::payload(self::order($oid),'Decka Pelplin — '.($offer?$offer->name:'bilety'));Decka_DB::update('orders',['stripe_payload'=>wp_json_encode($payload)],['id'=>$oid]);
             return $oid;
         });
         if(function_exists('wp_schedule_single_event'))wp_schedule_single_event(time()+600,'decka_expire_due',[$id]);return self::checkout($id);
@@ -67,8 +68,8 @@ final class Decka_Service {
     public static function checkout(int $id):array {
         global $wpdb;Decka_DB::require_storage();$o=self::order($id);if(!$o)throw new RuntimeException('Nie znaleziono zamówienia.');
         if($o->status==='creating'){
-            // A network timeout is ambiguous. Keep the seats and retry with the same Stripe key.
-            $session=Decka_Stripe::create($o);
+            // A network timeout is ambiguous. Keep the seats and retry with the same provider order identifier.
+            $session=self::provider($o)==='payu'?Decka_Payu::create($o):Decka_Stripe::create($o);
             if(($session['metadata']['decka_order']??'')!==(string)$id)throw new RuntimeException('Błąd przypisania płatności.');
             Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('orders')." SET session_id=%s,checkout_url=%s,status=IF(status='creating','pending',status) WHERE id=%d",$session['id'],$session['url']??'',$id),'orders');
             $o=self::order($id);
@@ -81,11 +82,11 @@ final class Decka_Service {
         Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('orders').' SET status=%s,paid_at=%s WHERE id=%d',$status,gmdate('Y-m-d H:i:s'),$id));
         Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('inventory').' SET state=%s WHERE order_id=%d',$status==='paid'?'paid':($status==='voucher'?'voucher':'free'),$id));
     }
-    public static function settle(array $s,string $mode):void {
+    public static function settle(array $s,string $mode,string $provider='stripe'):void {
         global $wpdb;$id=(int)($s['metadata']['decka_order']??0);if(!$id)return;
-        Decka_DB::tx(function()use($wpdb,$s,$mode,$id){
+        Decka_DB::tx(function()use($wpdb,$s,$mode,$id,$provider){
             $o=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('orders').' WHERE id=%d FOR UPDATE',$id));
-            if(!$o || $o->mode!==$mode || (bool)($s['livemode']??false)!==($mode==='live') || ($o->session_id && $o->session_id!==$s['id']) || (string)($s['client_reference_id']??'')!==(string)$id || (int)($s['amount_total']??-1)!==(int)$o->total || ($s['currency']??'')!=='pln')throw new RuntimeException('Płatność nie pasuje do zamówienia.');
+            if(!$o || self::provider($o)!==$provider || $o->mode!==$mode || (bool)($s['livemode']??false)!==($mode==='live') || ($o->session_id && $o->session_id!==$s['id']) || (string)($s['client_reference_id']??'')!==(string)$id || (int)($s['amount_total']??-1)!==(int)$o->total || ($s['currency']??'')!=='pln')throw new RuntimeException('Płatność nie pasuje do zamówienia.');
             if(!in_array($o->status,['creating','pending'],true))return;
             if(($s['payment_status']??'')==='paid'){
                 Decka_DB::update('orders',['session_id'=>$s['id'],'payment_id'=>$s['payment_intent']??null],['id'=>$id]);
@@ -96,8 +97,8 @@ final class Decka_Service {
             }
         });
     }
-    public static function revoke_payment(string $mode,string $payment,int $order_id=0):void {
-        global $wpdb;Decka_DB::tx(function()use($wpdb,$mode,$payment,$order_id){$o=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('orders').' WHERE mode=%s AND (payment_id=%s OR id=%d) FOR UPDATE',$mode,$payment,$order_id));if(!$o)return;if($o->payment_id && $o->payment_id!==$payment)throw new RuntimeException('Zwrot nie pasuje do płatności.');Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('orders')." SET status='refunded',payment_id=%s WHERE id=%d",$payment,$o->id));Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('tickets')." SET status='revoked' WHERE order_id=%d",$o->id));Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('inventory')." SET state='blocked' WHERE order_id=%d",$o->id));});
+    public static function revoke_payment(string $mode,string $payment,int $order_id=0,string $provider='stripe'):void {
+        global $wpdb;Decka_DB::tx(function()use($wpdb,$mode,$payment,$order_id,$provider){$o=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('orders').' WHERE mode=%s AND (payment_id=%s OR id=%d) FOR UPDATE',$mode,$payment,$order_id));if(!$o)return;if(self::provider($o)!==$provider)throw new RuntimeException('Nieprawidłowy operator zwrotu.');if($o->payment_id && $o->payment_id!==$payment)throw new RuntimeException('Zwrot nie pasuje do płatności.');Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('orders')." SET status='refunded',payment_id=%s WHERE id=%d",$payment,$o->id));Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('tickets')." SET status='revoked' WHERE order_id=%d",$o->id));Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('inventory')." SET state='blocked' WHERE order_id=%d",$o->id));});
     }
     public static function quote(array $input):array {
         global $wpdb;$settings=Decka_DB::settings();$offer_id=absint($input['offer_id']??0);$event_id=absint($input['event_id']??0);$now=gmdate('Y-m-d H:i:s');
@@ -117,6 +118,7 @@ final class Decka_Service {
         return ['before'=>$before,'regular'=>$regular,'total'=>$total,'discount'=>$before-$total,'percent'=>$before?round(($before-$total)*100/$before,1):0];
     }
     public static function refresh_payment(object $o):void {
+        if(self::provider($o)==='payu'){Decka_Payu::refresh($o);return;}
         $path='checkout/sessions/'.rawurlencode($o->session_id);
         $session=Decka_Stripe::request($o->mode,'GET',$path);
         if(strtotime($o->created_at.' UTC')+600<=time()&&($session['status']??'')==='open'&&($session['payment_status']??'')!=='paid'){
@@ -132,7 +134,7 @@ final class Decka_Service {
             $orders=$wpdb->get_results('SELECT * FROM '.Decka_DB::table('orders')." WHERE status IN ('creating','pending') ORDER BY COALESCE(last_error, ''),id LIMIT 100");
             foreach($orders as $o){try{
                 if($o->status==='creating'){
-                    if(strtotime($o->created_at.' UTC')<time()-23*3600){Decka_DB::update('orders',['last_error'=>'Wymagana ręczna weryfikacja w Stripe; blokada miejsc pozostaje.'],['id'=>$o->id]);continue;}
+                    if(strtotime($o->created_at.' UTC')<time()-23*3600){Decka_DB::update('orders',['last_error'=>'Wymagana ręczna weryfikacja u operatora płatności; blokada miejsc pozostaje.'],['id'=>$o->id]);continue;}
                     self::checkout((int)$o->id);$o=self::order((int)$o->id);
                 }
                 if($o->session_id)self::refresh_payment($o);
