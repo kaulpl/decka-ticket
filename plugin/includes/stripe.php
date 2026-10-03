@@ -25,16 +25,29 @@ final class Decka_Stripe {
         if(wp_remote_retrieve_response_code($r)>=300 || !is_array($body))throw new RuntimeException('Stripe: nie udało się potwierdzić operacji. Sprawdź ustawienia i dziennik Stripe.');
         return $body;
     }
+    public static function webhook_events():array {return ['checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.async_payment_failed','checkout.session.expired','charge.refunded','charge.dispute.created'];}
+    public static function webhook_url(string $url):string {
+        $p=wp_parse_url(trim($url));if(!$p||empty($p['host']))return $url;
+        $path=rtrim($p['path']??'','/');$query=[];parse_str($p['query']??'',$query);if(isset($query['rest_route']))$query['rest_route']=rtrim($query['rest_route'],'/');ksort($query);
+        $scheme=strtolower($p['scheme']??'');$port=$p['port']??null;$suffix=$port&&!(($scheme==='https'&&$port===443)||($scheme==='http'&&$port===80))?':'.$port:'';
+        return $scheme.'://'.strtolower($p['host']).$suffix.$path.($query?'?'.http_build_query($query):'');
+    }
     public static function health():array {
         $mode=Decka_DB::mode();$result=['mode'=>$mode,'checked_at'=>gmdate('c'),'ok'=>false,'checks'=>[]];
         try{
             if(!self::secret($mode)||!str_starts_with(self::secret($mode,'webhook'),'whsec_'))throw new RuntimeException('Uzupełnij klucz API i sekret webhook w aktywnym środowisku.');
             $balance=self::request($mode,'GET','balance');if(!isset($balance['livemode'])||(bool)$balance['livemode']!==($mode==='live'))throw new RuntimeException('Klucz odpowiada innemu środowisku Stripe.');
             $result['checks'][]=['ok'=>true,'label'=>'Klucz API i środowisko'];
-            $list=self::request($mode,'GET','webhook_endpoints',['limit'=>100]);$found=false;
-            $required=['checkout.session.completed','checkout.session.async_payment_succeeded','checkout.session.async_payment_failed','checkout.session.expired','charge.refunded','charge.dispute.created'];
-            foreach($list['data']??[] as $endpoint)if(($endpoint['url']??'')===rest_url('decka/v1/webhook/'.$mode)&&($endpoint['status']??'')==='enabled'&&(in_array('*',$endpoint['enabled_events']??[],true)||!array_diff($required,$endpoint['enabled_events']??[])))$found=true;
-            if(!$found)throw new RuntimeException('Nie znaleziono aktywnego webhooka z wymaganymi zdarzeniami. Sprawdź adres i zdarzenia w Stripe.');
+            $expected=rest_url('decka/v1/webhook/'.$mode);$events=[];$matched=false;$enabled=false;$params=['limit'=>100];
+            do{$list=self::request($mode,'GET','webhook_endpoints',$params);
+                foreach($list['data']??[] as $endpoint){if(self::webhook_url((string)($endpoint['url']??''))!==self::webhook_url($expected))continue;$matched=true;if(($endpoint['status']??'')!=='enabled')continue;$enabled=true;$candidate=$endpoint['enabled_events']??[];if(in_array('*',$candidate,true)||(!in_array('*',$events,true)&&count(array_intersect(self::webhook_events(),$candidate))>count(array_intersect(self::webhook_events(),$events))))$events=$candidate;}
+                $page=$list['data']??[];$lastEndpoint=end($page);$params['starting_after']=$lastEndpoint['id']??'';
+            }while(!empty($list['has_more'])&&$params['starting_after']);
+            $required=self::webhook_events();
+            if(!$matched)throw new RuntimeException('Nie znaleziono webhooka w tym koncie Stripe i środowisku '.$mode.'. W Stripe ustaw adres: '.$expected);
+            if(!$enabled)throw new RuntimeException('Webhook istnieje, ale jest wyłączony. Włącz go w Stripe: '.$expected);
+            $missing=in_array('*',$events,true)?[]:array_values(array_diff($required,$events));
+            if($missing)throw new RuntimeException('Webhook jest aktywny. Dodaj brakujące zdarzenia w Stripe: '.implode(', ',$missing).'.');
             $result['checks'][]=['ok'=>true,'label'=>'Adres webhooka i wymagane zdarzenia'];
             $last=get_option('decka_stripe_webhook_'.$mode,[]);$verified=!empty($last['fingerprint'])&&hash_equals(hash('sha256',self::secret($mode,'webhook')),$last['fingerprint']);
             $result['ok']=true;$result['message']='Połączenie i konfiguracja poprawne.';$result['webhook_verified']=$verified;$result['webhook_message']=$verified?'Odebrano webhook z poprawnym podpisem: '.$last['time']:'Sekret podpisu czeka na potwierdzenie: wyślij zdarzenie testowe ze Stripe lub wykonaj płatność. Samo sprawdzenie nie tworzy płatności.';
