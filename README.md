@@ -240,3 +240,15 @@ Podczas nieukończonej migracji klient otrzymuje komunikat o czasowej niedostęp
 Po zbudowaniu frontendu uruchom `node tests/shop-ui.mjs`, `node tests/scanner-ui.mjs` i `node tests/settings-ui.mjs` z dostępnym Playwright/Chromium. Opcjonalne zmienne `DECKA_PLAYWRIGHT_MODULE` i `CHROME_PATH` wskazują lokalną instalację. Testy korzystają z izolowanych odpowiedzi API. Sprawdzają zakup gościnny, brak PDF przed płatnością, proporcje kafelków, obliczenia raportów, przełączniki portfeli i dynamiczne wyszukiwanie bileterów. Test skanera dekoduje prawdziwy QR z syntetycznego obrazu kamery i sprawdza cztery stany oraz automatyczne wznowienie po 2 sekundach. Nie zastępuje to sprawdzenia aparatu na fizycznym telefonie.
 
 Test odczytu kodów z PDF: wyrenderuj stronę w 288–300 dpi i uruchom `QR_IMAGE=/sciezka/strona.png BARCODE_EXPECTED=DK-000000002 node tests/qr.mjs` z numerem i plikiem `tests/expected-qr.txt` właściwymi dla testowego dokumentu. Test porównuje odczyt QR i Code 128 z oczekiwanymi wartościami.
+
+## 0.6.0 — konto kibica, rezerwacje i mini-karnety
+
+- Konto kibica z danymi kontaktowymi, Google i biletami pogrupowanymi według miejsc oraz meczów. Hasło od 8 znaków, statusy płatności, świeże podpisane linki PDF (15 minut).
+- Publiczne numery biletów i zamówień są stabilnymi losowymi ciągami opartymi na istniejącym losowym identyfikatorze. Identyfikatory bazy i QR nie są zmieniane; nie jest potrzebna migracja tabel.
+- Rezerwacja: 10 minut od utworzenia zamówienia. Wtyczka aktywnie zamyka otwartą sesję Stripe i dopiero po potwierdzeniu zwalnia miejsce. Ukończona płatność wygrywa wyścig z wygaszaniem. Błąd sieci lub płatność nadal przetwarzana zachowuje blokadę do wyjaśnienia. Stripe nie dopuszcza parametru expires_at krótszego niż 30 minut.
+- **Hosting musi uruchamiać zadania WordPress co minutę** (np. `wp cron event run --due-now`). Sam WP-Cron zależy od ruchu; nie gwarantuje czasu wykonania. Zadanie jednorazowe po 10 minutach oraz kontrola co minutę korzystają z tej samej bezpiecznej logiki.
+- Plan hali: wolne, zablokowane (widoczne), ukryte i kamera. „Wszystkie mecze” zapisuje także domyślne ustawienie przyszłych meczów. Zakupione i zarezerwowane miejsca są chronione. Aby cofnąć makro, wybierz „Wszystkie mecze” i zwolnij blokadę.
+- Mini-karnety: grafika, lista przeciwników, logotypy podane w edycji meczu, ceny i oszczędności. Dozwolone kody wybiera się w edycji pakietu; pusta lista wyłącza kody, także po stronie serwera.
+- Podgląd rabatu nie rezerwuje miejsc ani wykorzystania kodu; ostateczna dostępność i rabat są ponownie sprawdzane w transakcji zakupu.
+- Limit odstępu zakupów dotyczy tego samego e-maila i meczu, także gości; 0 wyłącza ograniczenie.
+- PDF informuje o wejściu godzinę przed meczem. Okno skanera pozostaje bez zmian.

@@ -57,6 +57,11 @@ final class Decka_DB {
         if(!self::$installing&&!self::storage_ready())
             throw new RuntimeException('Baza biletów nie została jeszcze przełączona na dect_. Administrator: Ustawienia → System → Ponów migrację.');
     }
+    public static function hall_tx(callable $fn) {
+        global $wpdb;$key='decka_hall_'.substr(md5($wpdb->prefix),0,12);
+        if(!(int)$wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,10)',$key)))throw new RuntimeException('Plan hali jest aktualizowany. Spróbuj ponownie za chwilę.');
+        try{return self::tx($fn);}finally{$wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)',$key));}
+    }
     public static function tx(callable $fn) {
         global $wpdb;self::query('START TRANSACTION');self::$transaction_depth++;
         try{$r=$fn();self::query('COMMIT');self::$transaction_depth--;return $r;}
