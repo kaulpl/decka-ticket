@@ -33,3 +33,8 @@ $f=Decka_Updater::download(false,$package,null,[]);ok(is_string($f)&&file_exists
 $http[$api]=['code'=>429,'body'=>'{}'];ok(Decka_Updater::check(true)['status']==='error','rate limit is error not current');$http[$api]=new WP_Error('network','offline');ok(Decka_Updater::check(true)['status']==='error','network failure is error');
 $http[$api]=['code'=>200,'body'=>json_encode($release)];$http[$manifestUrl]=['code'=>200,'body'=>json_encode(array_merge($manifest,['requires_php'=>'99.0']))];Decka_Updater::check(true);ok(Decka_Updater::download(false,$package,null,[]) instanceof WP_Error,'incompatible PHP blocked');
 echo "$count updater checks passed\n";
+
+$http[$api]=['code'=>429,'body'=>'{}'];$http['https://github.com/kaulpl/decka-ticket/releases/latest/download/decka-bilety-update.json']=['code'=>200,'body'=>json_encode($manifest)];
+ok(Decka_Updater::check(true)['status']==='available','public release manifest works when shared GitHub API quota is exhausted');
+$http['https://github.com/kaulpl/decka-ticket/releases/latest/download/decka-bilety-update.json']['body']=json_encode(array_merge($manifest,['asset'=>'evil.zip']));
+ok(Decka_Updater::check(true)['status']==='error','fallback still validates exact package and manifest');

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Decka Bilety
  * Description: Numerowane miejsca, Stripe, bilety PDF i kontrola wejścia Decki Pelplin.
- * Version: 0.4.0
+ * Version: 0.5.0
  * Update URI: https://github.com/kaulpl/decka-ticket
  * Requires at least: 6.6
  * Requires PHP: 8.2
@@ -11,9 +11,9 @@
 defined('ABSPATH') || exit;
 define('DECKA_DIR', plugin_dir_path(__FILE__));
 define('DECKA_URL', plugin_dir_url(__FILE__));
-define('DECKA_VERSION', '0.4.0');
+define('DECKA_VERSION', '0.5.0');
 define('DECKA_FILE', __FILE__);
-foreach (['domain','db','stripe','service','guest','tickets','league','api','identity','wallet','updater','admin-api','admin'] as $part) require_once DECKA_DIR."includes/$part.php";
+foreach (['domain','db','stripe','profile','service','guest','tickets','league','api','identity','wallet','updater','admin-api','admin'] as $part) require_once DECKA_DIR."includes/$part.php";
 Decka_Updater::init();
 register_activation_hook(__FILE__, ['Decka_DB','install']);
 register_deactivation_hook(__FILE__, function(){ wp_clear_scheduled_hook('decka_maintenance'); });
@@ -42,3 +42,5 @@ add_action('admin_post_nopriv_decka_pdf',['Decka_Tickets','download']);
 add_action('admin_post_nopriv_decka_wallet',['Decka_Wallet','download']);
 
 add_filter('nonce_user_logged_out',function($uid,$action){if(($action==='wp_rest'||str_starts_with((string)$action,'decka_'))&&Decka_Guest::hash())return hexdec(substr(Decka_Guest::hash(),0,12));return $uid;},10,2);
+
+add_filter('user_has_cap',function($caps,$requested,$args,$user){if(!empty($caps['decka_scan'])&&get_user_meta($user->ID,'decka_scan_disabled',true))$caps['decka_scan']=false;return $caps;},10,4);

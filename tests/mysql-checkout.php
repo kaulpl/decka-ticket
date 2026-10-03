@@ -219,3 +219,29 @@ $healthFilter=function($pre,$args,$url){if(str_contains($url,'api.stripe.com/v1/
 remove_all_filters('pre_http_request');add_filter('pre_http_request',$healthFilter,10,3);
 $health=Decka_Stripe::health();decka_check($health['ok']&&!$health['webhook_verified'],'Stripe health verifies saved mode and distinguishes unverified webhook signature');
 $settings=Decka_DB::settings();$settings['apple_wallet_enabled']=0;$settings['google_wallet_enabled']=0;update_option('decka_settings',$settings);decka_check(!Decka_Wallet::enabled('apple')&&!Decka_Wallet::enabled('google'),'wallet off switches disable both providers');
+
+// Full registration profile, Google account reuse and scanner permission removal.
+$profile=['first_name'=>'Jan','last_name'=>'Kowalski','street'=>'Sambora','house_number'=>'5A','apartment'=>'','postcode'=>'83-130','city'=>'Pelplin','phone'=>'+48 123 456 789'];
+$bad=$profile;$bad['city']='';$failed=false;try{Decka_Profile::validate($bad);}catch(RuntimeException $e){$failed=true;}decka_check($failed,'incomplete profile rejected before account creation');
+$settings=Decka_DB::settings();$settings['registration']=1;update_option('decka_settings',$settings);
+$google=['sub'=>'ci-google-new','email'=>'new-google@gmail.com','email_verified'=>true,'name'=>'Jan Kowalski','given_name'=>'Jan','family_name'=>'Kowalski'];
+$newUid=Decka_Identity::resolve($google);decka_check(Decka_Profile::required($newUid),'new Google account requires contact form');
+Decka_Profile::save($newUid,$profile);decka_check(!Decka_Profile::required($newUid)&&Decka_Profile::read($newUid)['city']==='Pelplin','profile persists and completion flag clears');
+decka_check(Decka_Identity::resolve($google)===$newUid,'linked Google account signs into same user');
+$existing=wp_insert_user(['user_login'=>'ci_google_existing','user_email'=>'existing-ci@gmail.com','user_pass'=>wp_generate_password(),'role'=>'subscriber']);
+$google['sub']='ci-google-existing';$google['email']='existing-ci@gmail.com';decka_check(Decka_Identity::resolve($google)===$existing,'authoritative Google email reuses existing account without password');
+$failed=false;try{Decka_Identity::resolve($google,$newUid);}catch(RuntimeException $e){$failed=true;}decka_check($failed,'Google identity cannot be attached to another user');
+decka_check(!Decka_Identity::authoritative(['email'=>'thirdparty@example.test','email_verified'=>true]),'third-party email needs separate ownership confirmation');
+decka_check(Decka_Identity::authoritative(['email'=>'fan@workspace.test','email_verified'=>true,'hd'=>'workspace.test']),'Workspace verified email is authoritative');
+decka_check(!str_contains(Decka_Identity::callback_url(),'wp-admin'),'OAuth callback uses public route');
+$detail=Decka_Admin_API::order($guest['order_id']);decka_check($detail['items'][0]['ticket_number']===Decka_Tickets::number((int)$detail['items'][0]['ticket_id'])&&$detail['items'][0]['seat']['sector'],'order detail includes stable number and full seat location');
+Decka_DB::query('UPDATE '.Decka_DB::table('events')." SET gate_close='2000-01-01 00:00:00'");Decka_DB::update('events',['cancelled'=>0,'gate_open'=>gmdate('Y-m-d H:i:s',time()-3600),'gate_close'=>gmdate('Y-m-d H:i:s',time()+3600)],['id'=>$event]);
+$gate=Decka_API::gate_events();decka_check(count($gate)===1&&(int)$gate[0]->id===$event&&$gate[0]->entry_open,'scanner selects only closest eligible match');$before=$gate[0]->scanned;
+Decka_Tickets::scan(Decka_Tickets::documents($guest['order_id'])[0]['token'],$event);$gate=Decka_API::gate_events();decka_check($gate[0]->scanned===$before+1&&$gate[0]->total>=$gate[0]->scanned,'scanner progress counts valid admissions against issued tickets');
+wp_set_current_user(1);$admin=get_user_by('id',1);Decka_Admin_API::action(['operation'=>'gate_access','email'=>$admin->user_email,'enabled'=>false]);
+decka_check(current_user_can('manage_options')&&!current_user_can('decka_scan'),'remove scanner access from admin without removing administration');Decka_Admin_API::action(['operation'=>'gate_access','email'=>$admin->user_email,'enabled'=>true]);decka_check(current_user_can('decka_scan'),'administrator scanner access can be restored');
+
+// Registration and profile completion use authenticated REST nonces and private metadata.
+wp_set_current_user(0);$registration=new WP_REST_Request('POST','/decka/v1/register');$registration->set_header('origin',home_url());$registration->set_header('content-type','application/json');$registration->set_body(wp_json_encode($profile+['email'=>'registered-ci@example.test','password'=>'CI-Test-Password-12345','auth_nonce'=>wp_create_nonce('decka_auth')]));
+$response=rest_do_request($registration);decka_check($response->get_status()===200,'full registration form succeeds through REST');$registeredUid=get_current_user_id();decka_check($registeredUid>0&&Decka_Profile::read($registeredUid)['house_number']==='5A','registration stores address under authenticated fan');
+$public=Decka_API::catalog();decka_check(!str_contains(wp_json_encode($public),'registered-ci@example.test'),'public catalog does not expose profile details');

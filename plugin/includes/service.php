@@ -4,9 +4,10 @@ final class Decka_Service {
     public static function create(array $input,bool $voucher=false,string $guestHash=''):array {
         global $wpdb;Decka_DB::require_storage();$mode=Decka_DB::mode();$uid=get_current_user_id();
         if(!$uid&&($voucher||!preg_match('/^[a-f0-9]{64}$/',$guestHash)))throw new RuntimeException('Odśwież stronę zakupu.');
+        if($uid&&!$voucher&&class_exists('Decka_Profile')&&Decka_Profile::required($uid))throw new RuntimeException('Uzupełnij dane kibica przed zakupem.');
         $key=sanitize_text_field($input['request_key']??'');
         if(!preg_match('/^[a-zA-Z0-9-]{16,64}$/',$key))throw new RuntimeException('Niepoprawny identyfikator zamówienia.');
-        $buyer=[];
+        $buyer=[];if($uid&&!$voucher&&class_exists('Decka_Profile')){$profile=Decka_Profile::read($uid);foreach(['first_name','last_name','phone'] as $field)$buyer[$field]=$profile[$field];}
         if(!$uid){
             $key=hash_hmac('sha256',$key,$guestHash);
             foreach(['first_name','last_name'] as $field){$value=trim(sanitize_text_field($input[$field]??''));if($value===''||mb_strlen($value)>100)throw new RuntimeException('Podaj poprawne imię i nazwisko.');$buyer[$field]=$value;}

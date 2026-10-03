@@ -1,3 +1,14 @@
+## Wydanie 0.5.0
+
+- Google loguje istniejące połączone konto; zweryfikowane adresy Gmail/Workspace łączą się z istniejącym kontem bez hasła. Dla adresu spoza hostingu Google pierwsze połączenie wymaga jednorazowego linku e-mail w tej samej przeglądarce. Podpis, wystawca, odbiorca, nonce, state i PKCE nadal są weryfikowane. Źródło zasad zaufania: https://developers.google.com/identity/sign-in/web/backend-auth.
+- **Przed użyciem Google dodaj w Google Cloud → OAuth client → Authorized redirect URIs dokładnie `https://deckapelplin.pl/konto/google/powrot/`.** Wtyczka pokazuje właściwy adres dla swojej domeny w Ustawienia → Konta kibiców. Stary adres można zachować jako dodatkowy podczas aktualizacji. Nowe logowania korzystają z publicznych tras `/konto/google/start/` i `/konto/google/powrot/`; nie są to strony WordPressa do ręcznego tworzenia. Wyklucz `/konto/google/*` z cache/CDN.
+- Rejestracja zbiera imię, nazwisko, ulicę, numer domu, opcjonalny numer mieszkania, polski kod pocztowy, miejscowość, telefon i e-mail. Nowe konto Google uzupełnia dane przed zakupem. Dane adresowe pozostają prywatnymi danymi konta; zakup gościnny zachowuje dotychczasowy krótki formularz.
+- Bilety mają stabilny numer `DK-000000001` i kod kreskowy Code 128 w PDF. Mini-karnet używa jednego numeru dla miejsca we wszystkich swoich meczach. Numer identyfikuje dokument, a **wejście nadal weryfikuje podpisany QR**, nie sam numer biletu. Istniejące QR pozostają bez zmian. Ponowne pobranie PDF dodaje kod kreskowy także do starszych biletów.
+- Szczegóły zamówienia grupują miejsca pod meczem z datą, halą, sektorem, rzędem, numerem miejsca i numerem biletu. Filtr meczu znajduje się w treści nad danymi; kafle administracyjne pokazują całą grafikę 1920:1008.
+- Usunięcie biletera odbiera tylko dostęp do skanera — również administratorowi — bez usuwania konta i pozostałych ról. Dostęp można przywrócić wyszukaniem konta.
+- Skaner wybiera jeden najbliższy nieodwołany mecz z niewygasłym oknem wejścia, preferując mecz już otwarty. Pokazuje licznik poprawnych wejść / ważnych wydanych biletów (płatne, bezpłatne, vouchery); odświeża go po skanie i co 5 sekund. Przed otwarciem wejścia kamera jest wyłączona.
+- Przy limicie REST API GitHuba aktualizator pobiera publiczny manifest wydania bez tego limitu. Zachowuje weryfikację wersji, nazwy paczki, wymagań i sumy SHA-256.
+
 ## Wydanie 0.4.0
 
 - Główna aplikacja działa samodzielnie pod `/bilety/`, bez nagłówka motywu WordPressa; skaner pod `/skaner/`. Poprzednie adresy przekierowują na nowe. Wyklucz te dwie ścieżki i API `decka/v1` z cache stron/CDN.
@@ -16,13 +27,13 @@
 - W Ustawienia → System bieżący stan bazy i zalecane działanie są na górze. Historia, struktura tabel i JSON są schowane w szczegółach. Przycisk „Pobierz raport” zapisuje diagnostykę bez danych klientów i kluczy Stripe.
 - Przy niedokończonej migracji użyj „Ponów migrację”. „Sprawdź stan bazy” wykonuje wyłącznie diagnozę. Aktualizacje i zadania w tle mają oddzielne karty.
 
-# Decka Bilety 0.4.0
+# Decka Bilety 0.5.0
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
-1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.4.0.zip`. Aktywuj wtyczkę.
+1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.5.0.zip`. Aktywuj wtyczkę.
 2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
 3. Sprzedaż działa bezpośrednio pod **/bilety/** bez nagłówka motywu. Nie trzeba tworzyć strony WordPress. Krótki kod `[decka_bilety]` pozostaje dostępny do osadzenia na innych stronach.
 4. Skaner działa pod adresem **/skaner/** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
@@ -164,7 +175,7 @@ Każdy mecz może mieć grafikę JPG/PNG (do 8 MB i 6000 px), pokazywaną na kaf
 
 **Stripe:** `sk_test_…` / `sk_live_…` to klucz serwera. `pk_…` jest kluczem publicznym i w tym modelu przekierowania Checkout nie jest potrzebny. `whsec_…` nie znajduje się na liście kluczy API: w Stripe otwórz **Workbench → Webhooks → Add destination**, wybierz swoje konto i zdarzenia snapshot wymienione powyżej, wpisz URL ze strony ustawień, zapisz i odsłoń **Signing secret**. Osobno skonfiguruj test i produkcję. [Dokumentacja Stripe](https://docs.stripe.com/webhooks).
 
-**Logowanie Google:** w Google Cloud skonfiguruj ekran zgody OAuth i klienta typu Web application. Wklej Client ID i Client secret do ustawień wtyczki. Authorized redirect URI musi być dokładnie adresem pokazanym w panelu, np. `https://deckapelplin.pl/wp-admin/admin-post.php?action=decka_google_callback`. Nowi kibice mogą zarejestrować się przez Google; istniejący logują się hasłem i wybierają „Połącz konto Google”. Nie łączymy kont automatycznie wyłącznie po zgodnym e-mailu. [Google OIDC](https://developers.google.com/identity/openid-connect/openid-connect).
+**Logowanie Google:** w Google Cloud skonfiguruj ekran zgody OAuth i klienta typu Web application. Wklej Client ID i Client secret do ustawień wtyczki. Authorized redirect URI musi być dokładnie adresem pokazanym w panelu, np. `https://deckapelplin.pl/konto/google/powrot/`. Nowi kibice mogą zarejestrować się przez Google; istniejący logują się hasłem i wybierają „Połącz konto Google”. Istniejące konta z potwierdzonym adresem Gmail/Workspace są łączone automatycznie; inne adresy wymagają jednorazowego potwierdzenia e-maila. [Google OIDC](https://developers.google.com/identity/openid-connect/openid-connect).
 
 **Apple Wallet:** potrzebne aktywne konto Apple Developer, Pass Type ID, Team ID, certyfikat Pass Type i odpowiadający mu klucz prywatny w PEM oraz aktualny certyfikat pośredni Apple WWDR. Pola są w ustawieniach, sekrety są szyfrowane. Serwer generuje podpisany plik `.pkpass`, a nie przemianowany PDF. [Certyfikaty Apple](https://developer.apple.com/help/account/capabilities/create-wallet-identifiers-and-certificates/).
 

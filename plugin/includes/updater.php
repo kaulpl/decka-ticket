@@ -34,7 +34,7 @@ final class Decka_Updater {
         $cached=get_site_transient(self::CACHE);if(!$force&&is_array($cached))return $cached;
         $state=['installed'=>DECKA_VERSION,'repository'=>self::REPO,'checked_at'=>gmdate('c'),'status'=>'error','message'=>''];
         try{
-            $release=self::json('https://api.github.com/repos/'.self::REPO.'/releases/latest');$manifest_url=null;
+            try{$release=self::json('https://api.github.com/repos/'.self::REPO.'/releases/latest');}catch(RuntimeException $e){if(!in_array($e->getCode(),[403,429],true))throw $e;try{return self::from_public_manifest($state);}catch(Throwable $fallback){throw new RuntimeException('Nie można pobrać wydania z GitHub. Spróbuj ponownie później.');}}$manifest_url=null;
             foreach($release['assets']??[] as $a)if(($a['name']??'')==='decka-bilety-update.json')$manifest_url=$a['browser_download_url']??null;
             $tag=$release['tag_name']??'';
             if(!$manifest_url||$manifest_url!=='https://github.com/'.self::REPO.'/releases/download/'.$tag.'/decka-bilety-update.json')throw new RuntimeException('Wydanie nie ma manifestu decka-bilety-update.json.');
@@ -43,6 +43,14 @@ final class Decka_Updater {
             $state['message']=$state['status']==='available'?'Dostępna nowa wersja '.$state['version'].'.':'Brak nowszego stabilnego wydania.';
         }catch(Throwable $e){$state['status']=$e->getCode()===404?'no_release':'error';$state['message']=$e->getMessage();}
         set_site_transient(self::CACHE,$state,$state['status']==='error'?300:3600);return $state;
+    }
+    private static function from_public_manifest(array $state):array {
+        // Public release assets do not consume the REST API quota shared by hosting IPs.
+        $manifest=self::json('https://github.com/'.self::REPO.'/releases/latest/download/decka-bilety-update.json',65536);
+        $version=(string)($manifest['version']??'');if(!preg_match('/^\d+\.\d+\.\d+$/',$version))throw new RuntimeException('Niepoprawna wersja manifestu.');
+        $tag='v'.$version;$name='decka-bilety-'.$version.'.zip';
+        $release=['tag_name'=>$tag,'assets'=>[['name'=>$name,'browser_download_url'=>'https://github.com/'.self::REPO.'/releases/download/'.$tag.'/'.$name]]];
+        $state+=self::validate($release,$manifest);$state['status']=version_compare($version,DECKA_VERSION,'>')?'available':'current';$state['message']=$state['status']==='available'?'Dostępna nowa wersja '.$version.'.':'Brak nowszego stabilnego wydania.';$state['source']='public_release';set_site_transient(self::CACHE,$state,3600);return $state;
     }
     public static function status():array {
         $s=get_site_transient(self::CACHE);$s=is_array($s)?$s:['installed'=>DECKA_VERSION,'repository'=>self::REPO,'status'=>'unchecked','checked_at'=>null,'message'=>'Nie sprawdzono jeszcze repozytorium.'];
