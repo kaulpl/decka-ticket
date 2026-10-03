@@ -1,6 +1,7 @@
 <?php
 final class Decka_Scan_Error extends RuntimeException {public function __construct(public string $status,string $message){parent::__construct($message);}}
 final class Decka_Tickets {
+    public static function number(int $id):string {return 'DK-'.str_pad((string)$id,9,'0',STR_PAD_LEFT);}
     public static function documents(int $order_id):array {
         global $wpdb;$o=Decka_Service::order($order_id);if(!$o||!in_array($o->status,['paid','free','voucher'],true))throw new RuntimeException('Bilety nie są dostępne.');
         $rows=$wpdb->get_results($wpdb->prepare('SELECT t.*,e.opponent,e.starts_at,e.venue,e.image_id,i.amount FROM '.Decka_DB::table('tickets').' t JOIN '.Decka_DB::table('events').' e ON e.id=t.event_id JOIN '.Decka_DB::table('items').' i ON i.order_id=t.order_id AND i.event_id=t.event_id AND i.seat_id=t.seat_id WHERE t.order_id=%d ORDER BY t.id',$order_id));$groups=[];
@@ -29,7 +30,7 @@ final class Decka_Tickets {
             $text(22,$top+40,110,10,$t->venue,9);
             $pdf->SetFillColor(234,241,249);$pdf->RoundedRect(22,$top+54,113,11,2,'1111','F');$text(26,$top+57,106,7,'SEKTOR '.$seat['sector'].'   RZĄD '.$seat['row'].'   MIEJSCE '.$seat['number'],10,true);
             $pdf->write2DBarcode($doc['token'],'QRCODE,H',147,$top+5,42,42,['border'=>0,'padding'=>3,'fgcolor'=>[0,0,0],'bgcolor'=>[255,255,255]],'N');
-            $text(150,$top+48,38,6,'Bilet #'.$t->id,8);$text(150,$top+57,40,8,number_format($doc['amount']/100,2,',',' ').' PLN',11,true);
+            $pdf->write1DBarcode(self::number((int)$t->id),'C128',146,$top+48,44,12,.2,['border'=>false,'stretch'=>true,'padding'=>2,'fgcolor'=>[0,0,0],'bgcolor'=>[255,255,255],'text'=>false],'N');$text(147,$top+61,44,5,self::number((int)$t->id),7,true);$text(22,$top+49,110,5,'Wartość: '.number_format($doc['amount']/100,2,',',' ').' PLN',8);
             $y=$top+72;$all_revoked=!array_filter($doc['events'],fn($row)=>$row->status==='valid');
             if($o->mode==='test'||$all_revoked){$text(20,$y,175,5,$all_revoked?'BILET UNIEWAŻNIONY':'TEST - NIEWAŻNY NA PRAWDZIWY MECZ',8,true,[185,34,26]);$y+=6;}
             if($package){$text(16,$y,178,5,'MECZE OBJĘTE MINI-KARNETEM',9,true);$y+=6;foreach($doc['events'] as $row){$when=$row->starts_at?wp_date('d.m.Y H:i',strtotime($row->starts_at.' UTC'),new DateTimeZone('Europe/Warsaw')):'Termin do potwierdzenia';$state=$row->status==='revoked'?' / unieważniony':($row->used_at?' / wykorzystany':'');$text(18,$y,174,3.1,$when.' · '.$row->opponent.$state,7);$y+=3.1;}}
