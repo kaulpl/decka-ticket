@@ -245,3 +245,5 @@ decka_check(current_user_can('manage_options')&&!current_user_can('decka_scan'),
 wp_set_current_user(0);$registration=new WP_REST_Request('POST','/decka/v1/register');$registration->set_header('origin',home_url());$registration->set_header('content-type','application/json');$registration->set_body(wp_json_encode($profile+['email'=>'registered-ci@example.test','password'=>'CI-Test-Password-12345','auth_nonce'=>wp_create_nonce('decka_auth')]));
 $response=rest_do_request($registration);decka_check($response->get_status()===200,'full registration form succeeds through REST');$registeredUid=get_current_user_id();decka_check($registeredUid>0&&Decka_Profile::read($registeredUid)['house_number']==='5A','registration stores address under authenticated fan');
 $public=Decka_API::catalog();decka_check(!str_contains(wp_json_encode($public),'registered-ci@example.test'),'public catalog does not expose profile details');
+
+$lookup=Decka_Admin_API::tickets(['q'=>$detail['items'][0]['ticket_number']]);decka_check(count($lookup['rows'])===1&&$lookup['rows'][0]['ticket_number']===$detail['items'][0]['ticket_number'],'ticket number can be searched in administration');
