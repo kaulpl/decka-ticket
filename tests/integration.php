@@ -101,7 +101,7 @@ $wpdb->query('UPDATE wp_dect_tickets SET status="revoked" WHERE order_id='.$pack
 $settings['max_per_fan']=1;$uid=100;buy(80);rejects(fn()=>buy(81),'limit kibica obejmuje wcześniejsze oczekujące zamówienie');rejects(fn()=>buy(82,1,['offer_id'=>1,'package_ack'=>true]),'limit obejmuje również zakup pakietu');$uid=101;check(buy(81)['status']==='pending','limit liczony osobno dla każdego kibica');
 $settings['max_per_fan']=10;$uid=102;$wpdb->query('UPDATE wp_dect_events SET normal_price=3100 WHERE id=2');check(buy(83,2)['total']===3100,'cena indywidualnego meczu');check(buy(84,1)['total']===2500,'cena jednego meczu nie zmienia drugiego');
 rejects(fn()=>buy(85,1,['offer_id'=>1]),'pakiet wymaga potwierdzenia informacji o terminach');$wpdb->query('UPDATE wp_dect_events SET starts_at=NULL,sale_open=0 WHERE id=3');check(buy(85,1,['offer_id'=>1,'package_ack'=>true])['total']===6500,'pakiet obejmuje mecz bez ustalonej daty');rejects(fn()=>buy(86,3),'pojedynczy mecz bez daty nie jest sprzedawany');
-function get_attached_file($id){return __DIR__.'/artifacts/match-reference.png';}
+function get_attached_file($id){return __DIR__.'/artifacts/'.($id===999?'sponsors-test.png':'match-reference.png');}
 if(file_exists(get_attached_file(1)))$wpdb->query('UPDATE wp_dect_events SET image_id=1');
 @mkdir(__DIR__.'/artifacts',0777,true);file_put_contents(__DIR__.'/artifacts/package-TEST.pdf',Decka_Tickets::pdf($pack['order_id']));
 $pdf=Decka_Tickets::pdf($voucher['order_id']);@mkdir(__DIR__.'/artifacts',0777,true);check(file_put_contents(__DIR__.'/artifacts/voucher-TEST.pdf',$pdf)!==false,'PDF zapisany do pliku');check(str_starts_with($pdf,'%PDF-'),'generowany rzeczywisty bilet PDF');
