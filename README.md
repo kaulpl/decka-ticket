@@ -1,3 +1,12 @@
+## Wydanie 0.8.0
+
+- Skaner wybiera najbliższy mecz według daty rozpoczęcia, także gdy administrator nie ustawił jeszcze godzin wejścia. „Zmień mecz” otwiera listę przyszłych oraz dzisiejszych spotkań z trwającym oknem wejścia. Minione dni i odwołane mecze są pomijane. Zmiana pozostaje zachowana przy odświeżaniu licznika; skanowanie nadal wymaga prawidłowego okna wejścia.
+- Mobilna strona ma mniejszy hero, uproszczony nagłówek oraz duże B/C/D i linie rozdzielające sektory. Usunięto pasek kroków i moduł korzyści. Mini-karnety pokazują osobno cenę normalną i ulgową wraz z porównaniem cen pojedynczych meczów.
+- Wtyczka zawiera 16 logotypów z oficjalnej strony https://1lm.pzkosz.pl/druzyny.html (sezon 2026/2027, pobrano 04.10.2026). Dopasowanie po pełnej nazwie drużyny; ręcznie ustawiony adres logo ma pierwszeństwo. Źródła zapisano w `plugin/data/opponents.json`. Znaki należą do odpowiednich klubów.
+- Wiadomość HTML: podziękowanie, numer zamówienia, podsumowanie meczów i miejsc, prywatny przycisk pobierania oraz PDF w załączniku. Nadawca: **Bilety Decka Pelplin <bilety@deckapelplin.pl>**, Reply-To: **biuro@deckapelplin.pl**. Hosting/SMTP musi dopuszczać ten adres i nie nadpisywać go wymuszonym nadawcą. Wtyczka nie tworzy skrzynki i nie zmienia DNS/SMTP.
+- Przycisk w e-mailu ma osobny, trwały podpis związany z zamówieniem. Nie wymaga sesji ani konta gościa i nie wygasa po 15 minutach. Daje dostęp do PDF jak sam załącznik — nie należy udostępniać linku. Zamówienia nieopłacone i zwrócone nadal nie udostępniają biletu.
+- Ustawienia → Bilety i e-mail: wgranie/usunięcie poziomego paska sponsorów JPG/PNG, np. **2480 × 300 px**, proporcja minimum 7:1. Pasek zajmuje całą szerokość A4; treść zostaje dopasowana, aby uniknąć nakładania. Wgraj gotową kompozycję z marginesami w samym pliku. Po wgraniu zapisz ustawienia. Już wysłanych załączników aktualizacja nie zmienia.
+
 ## Wydanie 0.7.0
 
 - Naprawiono adres „Aktualizuj teraz”: parametry i nonce aktualizacji są przekazywane jako URL, bez kodowania HTML `&amp;`. Jeżeli masz jeszcze starszą wersję z uszkodzonym przyciskiem, aktualizuj przez **WordPress → Wtyczki → Zainstalowane wtyczki → Decka Bilety → Aktualizuj teraz** albo wgraj ZIP nowego wydania.
@@ -49,13 +58,13 @@ Diagnostyka Stripe akceptuje końcowy ukośnik adresu webhooka i przeszukuje kol
 - W Ustawienia → System bieżący stan bazy i zalecane działanie są na górze. Historia, struktura tabel i JSON są schowane w szczegółach. Przycisk „Pobierz raport” zapisuje diagnostykę bez danych klientów i kluczy Stripe.
 - Przy niedokończonej migracji użyj „Ponów migrację”. „Sprawdź stan bazy” wykonuje wyłącznie diagnozę. Aktualizacje i zadania w tle mają oddzielne karty.
 
-# Decka Bilety 0.7.0
+# Decka Bilety 0.8.0
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
-1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.7.0.zip`. Aktywuj wtyczkę.
+1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.8.0.zip`. Aktywuj wtyczkę.
 2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
 3. Sprzedaż działa bezpośrednio pod **/bilety/** bez nagłówka motywu. Nie trzeba tworzyć strony WordPress. Krótki kod `[decka_bilety]` pozostaje dostępny do osadzenia na innych stronach.
 4. Skaner działa pod adresem **/skaner/** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.

@@ -30,7 +30,7 @@ with zipfile.ZipFile(source,'w',zipfile.ZIP_DEFLATED) as z:
         if any(x in {'.git','node_modules','.next','out','assets','dist','__pycache__','tmp','output','artifacts'} for x in rel.parts):continue
         if not p.is_file() or p.is_relative_to(out):continue
         if p.suffix in {'.pdf','.tsbuildinfo'} or p.name.startswith(('wordpress-','expected-qr')):continue
-        if p.suffix=='.png' and rel.as_posix()!='frontend/public/logo.png':continue
+        if p.suffix=='.png' and not rel.as_posix().startswith('frontend/public/'):continue
         z.write(p,Path('decka-bilety-zrodla')/rel)
 sha=hashlib.sha256(install.read_bytes()).hexdigest()
 manifest={'slug':'decka-bilety','version':version,'asset':install.name,'sha256':sha,'requires':'6.6','requires_php':'8.2'}
