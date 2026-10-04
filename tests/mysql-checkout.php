@@ -301,5 +301,5 @@ $safe=Decka_Admin_API::settings();decka_check($safe['smtp_password_set']&&!isset
 Decka_Admin_API::action(array_merge($safe,['operation'=>'settings','smtp_password'=>'']));decka_check(Decka_DB::settings()['smtp_password']===$s['smtp_password'],'empty SMTP password preserves encrypted value through admin action');
 require_once ABSPATH.WPINC.'/PHPMailer/Exception.php';require_once ABSPATH.WPINC.'/PHPMailer/PHPMailer.php';require_once ABSPATH.WPINC.'/PHPMailer/SMTP.php';
 $mailer=new \PHPMailer\PHPMailer\PHPMailer(true);Decka_Mail::configure($mailer,Decka_DB::settings());
-decka_check($mailer->Mailer==='smtp'&&$mailer->SMTPSecure==='tls'&&$mailer->Port===587&&$mailer->SMTPAuth&&$mailer->From==='bilety@deckapelplin.pl'&&isset($mailer->getReplyToAddresses()['biuro@deckapelplin.pl']),'native PHPMailer configured without sending a message');
+decka_check($mailer->Mailer==='smtp'&&$mailer->SMTPSecure==='tls'&&$mailer->Port===587&&$mailer->SMTPAuth&&$mailer->From==='bilety@deckapelplin.pl'&&in_array('biuro@deckapelplin.pl',array_column($mailer->getReplyToAddresses(),0),true),'native PHPMailer configured without sending a message');
 $restore=Decka_DB::settings();$restore['smtp_enabled']=0;update_option('decka_settings',$restore);

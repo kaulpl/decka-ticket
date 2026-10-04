@@ -12,7 +12,7 @@ final class Decka_Mail {
         $next=array_merge($saved,$next);if($next['smtp_enabled']&&(!$next['smtp_host']||!$next['smtp_user']||!Decka_Stripe::decrypt($next['smtp_password']??'')))throw new RuntimeException('Uzupełnij serwer, login i hasło SMTP przed włączeniem.');return $next;
     }
     public static function configure(object $mail,array $s):void {
-        $mail->isSMTP();$mail->Host=$s['smtp_host'];$mail->Port=(int)$s['smtp_port'];$mail->SMTPSecure=$s['smtp_security'];$mail->SMTPAuth=true;$mail->Username=$s['smtp_user'];$mail->Password=Decka_Stripe::decrypt($s['smtp_password']??'');$mail->SMTPAutoTLS=true;$mail->Timeout=15;$mail->Timelimit=20;$mail->SMTPDebug=0;$mail->SMTPKeepAlive=false;
+        $mail->isSMTP();$mail->Host=$s['smtp_host'];$mail->Port=(int)$s['smtp_port'];$mail->SMTPSecure=$s['smtp_security'];$mail->SMTPAuth=true;$mail->Username=$s['smtp_user'];$mail->Password=Decka_Stripe::decrypt($s['smtp_password']??'');$mail->SMTPAutoTLS=true;$mail->Timeout=15;$mail->getSMTPInstance()->Timelimit=20;$mail->SMTPDebug=0;$mail->SMTPKeepAlive=false;
         $mail->SMTPOptions=['ssl'=>['verify_peer'=>true,'verify_peer_name'=>true,'allow_self_signed'=>false]];
         $mail->CharSet='UTF-8';$mail->setFrom('bilety@deckapelplin.pl','Bilety Decka Pelplin');$mail->addReplyTo('biuro@deckapelplin.pl','Biuro Decka Pelplin');
     }

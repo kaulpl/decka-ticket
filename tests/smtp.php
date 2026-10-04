@@ -4,7 +4,7 @@ namespace PHPMailer\PHPMailer {
 class PHPMailer {
  public static array $instances=[];public static bool $fail=false;public array $addresses=[],$attachments=[];public bool $closed=false,$sent=false;public int $connections=0;
  public function __construct($exceptions=true){self::$instances[]=$this;}
- public function isSMTP(){$this->transport='smtp';}public function setFrom($email,$name){$this->from=[$email,$name];}public function addReplyTo($email,$name){$this->reply=[$email,$name];}
+ public function getSMTPInstance(){return $this;}public function isSMTP(){$this->transport='smtp';}public function setFrom($email,$name){$this->from=[$email,$name];}public function addReplyTo($email,$name){$this->reply=[$email,$name];}
  public function smtpConnect(){$this->connections++;if(self::$fail)throw new \RuntimeException('private SMTP password fixture-password');return true;}
  public function smtpClose(){$this->closed=true;}public function addAddress($to){$this->addresses[]=$to;}public function isHTML($v){$this->html=$v;}public function addAttachment($file,$name){$this->attachments[]=[$file,$name];}
  public function send(){$this->smtpConnect();$this->sent=true;return true;}
