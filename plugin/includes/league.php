@@ -7,6 +7,10 @@ final class Decka_League {
         foreach($logos as $team)if(mb_strtolower($team['name'],'UTF-8')===$key)return plugins_url('assets/opponents/'.$team['id'].'.png',DECKA_FILE);
         return '';
     }
+    public static function logo_file(string $name):string {
+        $logos=json_decode(file_get_contents(DECKA_DIR.'data/opponents.json'),true)?:[];$key=mb_strtolower(trim(preg_replace('/\s+/u',' ',$name)),'UTF-8');
+        foreach($logos as $team)if(mb_strtolower($team['name'],'UTF-8')===$key){$file=DECKA_DIR.'assets/opponents/'.$team['id'].'.png';return is_file($file)?$file:'';}return '';
+    }
     public static function parse(string $html,string $team_id):array {
         $doc=new DOMDocument();$prev=libxml_use_internal_errors(true);$doc->loadHTML('<?xml encoding="utf-8" ?>'.$html);libxml_clear_errors();libxml_use_internal_errors($prev);$xp=new DOMXPath($doc);$result=[];
         foreach($xp->query('//table//tr') as $tr){$td=$xp->query('./td',$tr);if($td->length!==5)continue;$home=$xp->query('.//a',$td->item(1))->item(0);$game=$xp->query('.//a',$td->item(2))->item(0);if(!$home||!$game||!preg_match('~/d/'.preg_quote($team_id,'~').'/~',$home->getAttribute('href'))||!preg_match('~/mecz/(\d+)/~',$game->getAttribute('href'),$m))continue;
