@@ -51,7 +51,7 @@ $schemas=[
 foreach($schemas as $n=>$s)$wpdb->query("CREATE TABLE wp_dect_$n ($s)");
 // SQLite equivalent only for the conditional state transition used by checkout().
 $sqliteFn=method_exists($wpdb->pdo,'createFunction')?'createFunction':'sqliteCreateFunction';$wpdb->pdo->$sqliteFn('IF',fn($cond,$yes,$no)=>$cond?$yes:$no,3);
-foreach(['domain','db','service','tickets'] as $p)require DECKA_DIR.'includes/'.$p.'.php';
+foreach(['domain','db','mail','service','tickets','league'] as $p)require DECKA_DIR.'includes/'.$p.'.php';
 for($i=1;$i<=3;$i++)Decka_DB::insert('events',['id'=>$i,'opponent'=>'Drużyna '.$i,'starts_at'=>gmdate('Y-m-d H:i:s',time()+86400*$i),'sale_open'=>1,'gate_open'=>gmdate('Y-m-d H:i:s',time()-3600),'gate_close'=>gmdate('Y-m-d H:i:s',time()+3600),'venue'=>'Hala testowa']);
 function buy($seat,$event=1,$extra=[]){return Decka_Service::create(array_merge(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'seats'=>[['id'=>(string)$seat,'kind'=>'normal']]],$extra));}
 $key='11111111-1111-1111-1111-111111111111';$a=buy(66,1,['request_key'=>$key]);
@@ -101,7 +101,7 @@ $wpdb->query('UPDATE wp_dect_tickets SET status="revoked" WHERE order_id='.$pack
 $settings['max_per_fan']=1;$uid=100;buy(80);rejects(fn()=>buy(81),'limit kibica obejmuje wcześniejsze oczekujące zamówienie');rejects(fn()=>buy(82,1,['offer_id'=>1,'package_ack'=>true]),'limit obejmuje również zakup pakietu');$uid=101;check(buy(81)['status']==='pending','limit liczony osobno dla każdego kibica');
 $settings['max_per_fan']=10;$uid=102;$wpdb->query('UPDATE wp_dect_events SET normal_price=3100 WHERE id=2');check(buy(83,2)['total']===3100,'cena indywidualnego meczu');check(buy(84,1)['total']===2500,'cena jednego meczu nie zmienia drugiego');
 rejects(fn()=>buy(85,1,['offer_id'=>1]),'pakiet wymaga potwierdzenia informacji o terminach');$wpdb->query('UPDATE wp_dect_events SET starts_at=NULL,sale_open=0 WHERE id=3');check(buy(85,1,['offer_id'=>1,'package_ack'=>true])['total']===6500,'pakiet obejmuje mecz bez ustalonej daty');rejects(fn()=>buy(86,3),'pojedynczy mecz bez daty nie jest sprzedawany');
-function get_attached_file($id){return __DIR__.'/artifacts/'.($id===999?'sponsors-test.png':'match-reference.png');}
+function get_attached_file($id){return __DIR__.'/artifacts/'.($id===999?'sponsors-test.png':($id===998?'main-sponsors-test.png':'match-reference.png'));}
 if(file_exists(get_attached_file(1)))$wpdb->query('UPDATE wp_dect_events SET image_id=1');
 @mkdir(__DIR__.'/artifacts',0777,true);file_put_contents(__DIR__.'/artifacts/package-TEST.pdf',Decka_Tickets::pdf($pack['order_id']));
 $pdf=Decka_Tickets::pdf($voucher['order_id']);@mkdir(__DIR__.'/artifacts',0777,true);check(file_put_contents(__DIR__.'/artifacts/voucher-TEST.pdf',$pdf)!==false,'PDF zapisany do pliku');check(str_starts_with($pdf,'%PDF-'),'generowany rzeczywisty bilet PDF');

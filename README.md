@@ -1,3 +1,12 @@
+## Wydanie 0.9.0
+
+- Dwa niezależne paski: **Sponsorzy główni** i **Sponsorzy**. Wgrywasz je w **Ustawienia → Bilety i e-mail** (JPG/PNG, np. 2480 × 300 px, minimum 7:1). Na PDF są pod miejscem i QR, w tej kolejności, przed informacją o bilecie na telefonie. Te same pliki wyświetlają się pod kafelkami oferty. Dotychczasowy pasek sponsorów zostaje zachowany.
+- Mini-karnet pokazuje cenę normalną i ulgową z porównaniem oraz listę „vs · logo · przeciwnik”. PDF zawiera lokalne logotypy klubów przed nazwami i nie dopisuje „wykorzystany” po skanowaniu. Unieważnienie biletu pozostaje oznaczone. Przy długich pakietach lista jest w dwóch kolumnach, a grafika meczu mniejsza, aby zachować jedną stronę A4.
+- Przyciski powrotu do wszystkich meczów i całej hali są niebieskie, z białym tekstem oraz czerwoną dolną krawędzią.
+- **SMTP dla biletów**: w tej samej zakładce włącz transport, wpisz serwer, login i hasło od operatora poczty, wybierz port 587/STARTTLS albo 465/TLS i zapisz. Następnie użyj **Sprawdź połączenie SMTP**. Test potwierdza połączenie i logowanie, nie wysyła wiadomości i nie potwierdza dostarczalności do skrzynki.
+- SMTP obsługuje wyłącznie wiadomości z biletami. Wyłączony korzysta z dotychczasowego `wp_mail`; włączony używa oddzielnego PHPMailer z weryfikacją certyfikatu. Nie nadpisuje globalnego mailera WordPressa. Przy błędzie nie przełącza się potajemnie na inny transport; zamówienie pozostaje w kolejce ponownej wysyłki. Hasło jest szyfrowane, nie wraca do przeglądarki, puste pole zachowuje poprzednie hasło. Konfiguracja i test SMTP wymagają administratora WordPressa.
+- Nadawca pozostaje **Bilety Decka Pelplin <bilety@deckapelplin.pl>**, odpowiedzi trafiają do **biuro@deckapelplin.pl**. Skrzynka musi istnieć u operatora i zezwalać na tego nadawcę. Aktualizacja nie tworzy skrzynki ani nie zmienia rekordów DNS. Nie wymaga migracji tabel. Już wysłane załączniki pozostają bez zmian.
+
 ## Wydanie 0.8.0
 
 - Skaner wybiera najbliższy mecz według daty rozpoczęcia, także gdy administrator nie ustawił jeszcze godzin wejścia. „Zmień mecz” otwiera listę przyszłych oraz dzisiejszych spotkań z trwającym oknem wejścia. Minione dni i odwołane mecze są pomijane. Zmiana pozostaje zachowana przy odświeżaniu licznika; skanowanie nadal wymaga prawidłowego okna wejścia.
