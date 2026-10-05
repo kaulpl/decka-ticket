@@ -1,6 +1,6 @@
 <?php
 final class Decka_Service {
-    public static function provider(object $o):string {return (json_decode($o->stripe_payload??'',true)['provider']??'stripe')==='payu'?'payu':'stripe';}
+    public static function provider(object $o):string {$provider=json_decode($o->stripe_payload??'',true)['provider']??'stripe';return in_array($provider,['stripe','payu','cashier'],true)?$provider:'stripe';}
     public static function number(object $o):string {return 'Z-'.strtoupper(substr(hash('sha256',$o->mode.'|'.$o->id.'|'.$o->request_key),0,16));}
     public static function order(int $id):?object{global $wpdb;return $wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('orders').' WHERE id=%d',$id));}
     public static function create(array $input,bool $voucher=false,string $guestHash=''):array {
@@ -129,7 +129,7 @@ final class Decka_Service {
     }
     public static function expire_due(int $id=0):void {if(!$id){self::maintenance();return;}try{$o=self::order($id);if(!$o||!in_array($o->status,['creating','pending'],true))return;if($o->status==='creating'){self::checkout($id);$o=self::order($id);}if($o->session_id)self::refresh_payment($o);}catch(Throwable $e){Decka_DB::update('orders',['last_error'=>$e->getMessage()],['id'=>$id]);}}
     public static function maintenance():void {
-        global $wpdb;Decka_DB::require_storage();$lock='decka_maintenance_'.substr(md5($wpdb->prefix),0,12);if(!(int)$wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,0)',$lock)))return;
+        global $wpdb;Decka_DB::require_storage();Decka_Cashier::expire();$lock='decka_maintenance_'.substr(md5($wpdb->prefix),0,12);if(!(int)$wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s,0)',$lock)))return;
         try{
             $orders=$wpdb->get_results('SELECT * FROM '.Decka_DB::table('orders')." WHERE status IN ('creating','pending') ORDER BY COALESCE(last_error, ''),id LIMIT 100");
             foreach($orders as $o){try{

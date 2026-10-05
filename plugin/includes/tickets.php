@@ -11,35 +11,35 @@ final class Decka_Tickets {
     public static function pdf(int $order_id):string {
         require_once DECKA_DIR.'vendor/tcpdf/tcpdf.php';$o=Decka_Service::order($order_id);$documents=self::documents($order_id);
         $pdf=new TCPDF('P','mm','A4',true,'UTF-8',false);$pdf->setPrintHeader(false);$pdf->setPrintFooter(false);$pdf->SetMargins(16,16,16);$pdf->SetAutoPageBreak(false);$pdf->SetCreator('Decka Pelplin');$pdf->SetTitle('Bilety Decka Pelplin');$seats=array_column(Decka_DB::seats()['seats'],null,'id');
-        foreach($documents as $doc){$t=$doc['ticket'];$seat=$seats[$t->seat_id];$package=$doc['package'];$pdf->AddPage();
-            $text=function($x,$y,$w,$h,$value,$size=10,$bold=false,$color=[23,46,76])use($pdf){$pdf->SetFont('dejavusans',$bold?'B':'',$size);$pdf->SetTextColor(...$color);$pdf->SetXY($x,$y);$pdf->MultiCell($w,$h,(string)$value,0,'L',false,1,'','',true,0,false,true,$h,'T',true);};
-            $color=Decka_DB::settings()['ticket_color']??'#19569d';$rgb=preg_match('/^#[a-f0-9]{6}$/i',$color)?[hexdec(substr($color,1,2)),hexdec(substr($color,3,2)),hexdec(substr($color,5,2))]:[25,86,157];$pdf->SetFillColor(...$rgb);$pdf->Rect(0,0,210,5,'F');$pdf->SetFillColor(207,37,25);$pdf->Rect(158,0,52,5,'F');
-            $text(16,11,125,9,'DECKA PELPLIN',20,true);$text(16,22,140,6,'OFICJALNY BILET KLUBOWY',8);$text(152,13,45,12,'Zamówienie '.Decka_Service::number($o),9);
+        foreach($documents as $doc){$t=$doc['ticket'];$seat=$seats[$t->seat_id];$package=$doc['package'];
             $logo=DECKA_DIR.'assets/logo.png';$image=!empty($t->image_id)&&function_exists('get_attached_file')?get_attached_file((int)$t->image_id):'';
             $sponsors=[];$sponsorHeight=0;foreach(['main_sponsor_image_id','sponsor_image_id'] as $key){$sid=(int)(Decka_DB::settings()[$key]??0);if(!$sid||!function_exists('get_attached_file'))continue;$file=get_attached_file($sid);$size=$file&&is_file($file)?getimagesize($file):false;if(!$size||!in_array($size[2],[IMAGETYPE_JPEG,IMAGETYPE_PNG],true)||$size[0]/$size[1]<7)continue;$height=210*$size[1]/$size[0];$sponsors[]=['file'=>$file,'height'=>$height];$sponsorHeight+=$height+3;}
             $columns=$package&&count($doc['events'])>6?2:1;$rowHeight=$package&&count($doc['events'])>12?4.5:6;$listHeight=$package?8+ceil(count($doc['events'])/$columns)*$rowHeight:0;
             $maxHeight=min(94,282-41-74-$sponsorHeight-6-$listHeight-28);$imageHeight=min(53,$maxHeight);$imageWidth=178;
             $validImage=$image&&is_file($image)&&($dim=getimagesize($image))&&in_array($dim[2],[IMAGETYPE_JPEG,IMAGETYPE_PNG],true);
             if($validImage){$imageHeight=min($maxHeight,178*$dim[1]/$dim[0]);$imageWidth=$imageHeight*$dim[0]/$dim[1];}
+            $pageHeight=min(297,max(170,34+$imageHeight+7+74+($o->mode==='test'?6:0)+$listHeight+$sponsorHeight+11));$pdf->AddPage('P',[210,$pageHeight]);
+            $text=function($x,$y,$w,$h,$value,$size=10,$bold=false,$color=[23,46,76])use($pdf){$pdf->SetFont('dejavusans',$bold?'B':'',$size);$pdf->SetTextColor(...$color);$pdf->SetXY($x,$y);$pdf->MultiCell($w,$h,(string)$value,0,'L',false,1,'','',true,0,false,true,$h,'T',true);};
+            $color=Decka_DB::settings()['ticket_color']??'#19569d';$rgb=preg_match('/^#[a-f0-9]{6}$/i',$color)?[hexdec(substr($color,1,2)),hexdec(substr($color,3,2)),hexdec(substr($color,5,2))]:[25,86,157];$pdf->SetFillColor(...$rgb);$pdf->Rect(0,0,210,5,'F');$pdf->SetFillColor(207,37,25);$pdf->Rect(158,0,52,5,'F');
+            $text(16,11,125,9,'DECKA PELPLIN',20,true);$text(16,22,140,6,'OFICJALNY BILET KLUBOWY',8);$text(152,13,45,12,'Zamówienie '.Decka_Service::number($o),9);
             $pdf->SetFillColor(236,243,251);$pdf->RoundedRect(16,34,178,$imageHeight,3,'1111','F');
             if($validImage)$pdf->Image($image,16+(178-$imageWidth)/2,34,$imageWidth,$imageHeight);
             else{if(is_file($logo))$pdf->Image($logo,24,36,min(39,$imageHeight-4),max(1,$imageHeight-4),'','','',false,300,'',false,false,0,true);$text(75,36,110,max(8,$imageHeight-4),$package?'MINI-KARNET':'DECKA PELPLIN'."\n".'vs '.$t->opponent,min(18,$imageHeight),true);}
             $top=34+$imageHeight+7;
             $pdf->SetDrawColor(207,215,226);$pdf->RoundedRect(16,$top,178,70,4,'1111','D');$pdf->Line(142,$top+5,142,$top+65);
             $title=$package?'MINI-KARNET · '.count($doc['events']).' MECZÓW':'Decka Pelplin - '.$t->opponent;$text(22,$top+5,114,16,$title,13,true);
-            $kind=$t->kind==='voucher'?'VOUCHER':($t->kind==='reduced'?'Bilet ulgowy':'Bilet normalny');$text(22,$top+23,112,6,$kind.' · '.$o->email,8);
+            $kind=$t->kind==='voucher'?'VOUCHER':($t->kind==='reduced'?'Bilet ulgowy':($t->kind==='free'?'Bilet darmowy':'Bilet normalny'));$text(22,$top+23,112,6,$kind.' · '.$o->email,8);
             $text(22,$top+31,110,7,$package?'Jeden QR na wszystkie wymienione mecze':($t->starts_at?wp_date('d.m.Y · H:i',strtotime($t->starts_at.' UTC'),new DateTimeZone('Europe/Warsaw')):'Termin do potwierdzenia'),10,true);
             $text(22,$top+40,110,10,$t->venue,9);
             $pdf->SetFillColor(234,241,249);$pdf->RoundedRect(22,$top+54,113,11,2,'1111','F');$text(26,$top+57,106,7,'SEKTOR '.$seat['sector'].'   RZĄD '.$seat['row'].'   MIEJSCE '.$seat['number'],10,true);
             $pdf->write2DBarcode($doc['token'],'QRCODE,H',147,$top+5,42,42,['border'=>0,'padding'=>3,'fgcolor'=>[0,0,0],'bgcolor'=>[255,255,255]],'N');
             $pdf->write1DBarcode(self::number((int)$t->id),'C128',146,$top+48,44,12,.2,['border'=>false,'stretch'=>true,'padding'=>2,'fgcolor'=>[0,0,0],'bgcolor'=>[255,255,255],'text'=>false],'N');$text(147,$top+61,44,5,self::number((int)$t->id),6,true);$text(22,$top+49,110,5,'Wartość: '.number_format($doc['amount']/100,2,',',' ').' PLN',8);
             $y=$top+74;
-            foreach($sponsors as $strip){$pdf->Image($strip['file'],0,$y,210,$strip['height']);$y+=$strip['height']+3;}
             $all_revoked=!array_filter($doc['events'],fn($row)=>$row->status==='valid');
             if($o->mode==='test'||$all_revoked){$text(16,$y,178,5,$all_revoked?'BILET UNIEWAŻNIONY':'TEST - NIEWAŻNY NA PRAWDZIWY MECZ',8,true,[185,34,26]);$y+=6;}
             if($package){$text(16,$y,178,5,'MECZE OBJĘTE MINI-KARNETEM',9,true);$y+=8;$base=$y;$perColumn=(int)ceil(count($doc['events'])/$columns);foreach($doc['events'] as $index=>$row){$x=16+(int)floor($index/$perColumn)*91;$lineY=$base+($index%$perColumn)*$rowHeight;$width=$columns===2?87:178;$when=$row->starts_at?wp_date('d.m.Y H:i',strtotime($row->starts_at.' UTC'),new DateTimeZone('Europe/Warsaw')):'Termin do potwierdzenia';$text($x,$lineY,34,$rowHeight,$when,6.5);$lf=Decka_League::logo_file($row->opponent);if($lf)$pdf->Image($lf,$x+35,$lineY,4,4,'','','',false,300,'',false,false,0,true);$state=$row->status==='revoked'?' / unieważniony':'';$text($x+41,$lineY,$width-41,$rowHeight,$row->opponent.$state,$columns===2?6.5:8);}$y=$base+$perColumn*$rowHeight+2;}
-            $text(16,$y+2,178,7,'BILET NA TELEFONIE WYSTARCZY',11,true);$text(16,$y+10,178,10,'Pokaż kod QR przy wejściu. Bilet ulgowy wymaga potwierdzenia uprawnienia. Nie udostępniaj kodu innym osobom.',8);$text(16,$y+21,178,6,Decka_DB::settings()['ticket_footer']??'Aktualne informacje: deckapelplin.pl/bilety',7);
-            $text(16,286,178,7,$package?'Terminy mogą się zmienić. Wejście na halę: godzinę przed meczem.':'Wejście na halę: godzinę przed meczem. · deckapelplin.pl',8);
+            $text(16,$y,178,6,'Wejście na halę: godzinę przed meczem.',8,true);$y+=7;
+            foreach($sponsors as $strip){$pdf->Image($strip['file'],0,$y,210,$strip['height']);$y+=$strip['height']+3;}
         }return $pdf->Output('decka-bilety.pdf','S');
     }
     public static function email(int $id):void {
