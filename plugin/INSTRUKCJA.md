@@ -1,4 +1,4 @@
-## Wydanie 1.0.0
+## Wydanie 1.1.0
 
 Wersja 1.0 dodaje pełnoekranowy moduł kasjera pod `/kasjer`, sprzedaż biletów normalnych, ulgowych i darmowych z natychmiastową blokadą miejsca oraz bezpieczną wymianę miejsc z unieważnieniem starego kodu QR. Panel administracyjny otrzymał oddzielne dostępy bileterów i kasjerów, dziennik zdarzeń, pełne archiwum danych, raporty PDF oraz dwuetapowy reset systemu. Plan hali rozróżnia sprzedaż internetową i kasową, a generator biletu kończy dokument na paskach sponsorów.
 
@@ -61,7 +61,7 @@ Diagnostyka Stripe akceptuje końcowy ukośnik adresu webhooka i przeszukuje kol
 - Zakup gościnny: e-mail, imię, nazwisko, opcjonalny telefon. Konto nie jest tworzone. Zamówienia i pobrania w tej przeglądarce chroni losowy identyfikator w ciasteczku HttpOnly oraz powiązane zabezpieczenie żądań. E-mail sam nie daje dostępu do zamówień. Bilet przychodzi w załączniku po potwierdzonej płatności; bezpłatne bilety i vouchery nie wymagają płatności.
 - Kafle meczów mają ograniczoną szerokość i pokazują całą grafikę w proporcji 1920:1008. PDF dopasowuje wysokość grafiki do proporcji i mieści bilet na jednej stronie A4 (skrajnie wysokie obrazy są proporcjonalnie zmniejszane).
 - Synchronizacja ustawia wejście od 2 godzin przed rozpoczęciem do 2 godzin po rozpoczęciu meczu. Ręcznie zmienione godziny mają pierwszeństwo. Edycja meczu pozwala wrócić do automatycznych godzin. Zmiana terminu nadal zamyka sprzedaż do ponownego otwarcia przez klub.
-- Raporty obejmują normalne, ulgowe, vouchery, bezpłatne, oczekujące, sprzedaż, wejścia i przychody per mecz. Wykresy zapełnienia dotyczą 340 miejsc B/C/D, a nie wszystkich miejsc fizycznych w hali.
+- Raporty obejmują normalne, ulgowe, vouchery, bezpłatne, oczekujące, sprzedaż, wejścia i przychody per mecz. Wykresy zapełnienia dotyczą 470 miejsc w sektorach A-E.
 - Aktualizację można zainstalować przyciskiem przez standardowy, chroniony mechanizm WordPressa. Diagnostyka Stripe odczytuje aktywne środowisko, klucz API i konfigurację webhooka; osobno pokazuje, czy odebrano już poprawnie podpisany webhook. Nie tworzy transakcji i nie zastępuje próby płatności BLIK na hostingu.
 - Apple Wallet i Google Wallet mają osobne przełączniki. Wyłączenie ukrywa konfigurację i wyłącza wydawanie portfeli; zapisane klucze pozostają zachowane.
 - Zespół bileterów: wyszukiwanie po fragmencie imienia/nazwiska/loginu/e-maila, nadawanie oraz usuwanie dostępu bez kasowania konta kibica. Skaner nie ma ręcznego wpisywania kodu; wynik pokazuje przez 2 sekundy, następnie wraca do kamery. Zielony oznacza wejście, żółty wykorzystany bilet, niebieski inny mecz, czerwony pozostałe błędy.
@@ -75,7 +75,7 @@ Diagnostyka Stripe akceptuje końcowy ukośnik adresu webhooka i przeszukuje kol
 
 # Decka Bilety 0.8.0
 
-Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
+Wtyczka WordPress z interfejsem Next.js, mapą 470 miejsc w sektorach A-E, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
@@ -108,7 +108,7 @@ Potwierdzenie na stronie powrotu ze Stripe nie wystarcza do wystawienia biletu. 
 
 ## Mapa miejsc
 
-- Tylko sektory potwierdzone przez klub: **B — 105, C — 130, D — 105**, razem **340 miejsc**.
+- Plan hali: **A — 65, B — 105, C — 130, D — 105, E — 65**, razem **470 miejsc**. Centralne sektory B/C/D i kamery zachowują współrzędne z arkusza; skrajne sektory A/E uzupełniają ciągłą numerację planu.
 - Osiem pól „KAMERA” nie jest miejscami sprzedażowymi. Nie dodano sektora A ani brakujących numerów.
 - Położenie i numery pochodzą z komórek Excela, w tym szerszego górnego rzędu. Puste komórki zachowują odstępy.
 - Excel nie zawiera nazw rzędów: przyjęto **rząd 1 najbliżej boiska, rząd 8 najdalej**. Numery miejsc pozostają dokładnie takie jak w pliku.

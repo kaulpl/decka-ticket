@@ -67,7 +67,7 @@ $venue=$wpdb->get_row('SHOW COLUMNS FROM '.Decka_DB::table('events')." LIKE 'ven
 decka_check($venue->Default==='Hala ZKiW nr 1, Sambora 5A, Pelplin','migration preserves commas in quoted venue default');
 
 // Full checkout audit: paid settlement, issuance, package, voucher, and atomic failures.
-$settings=Decka_DB::settings();$settings['max_per_fan']=340;update_option('decka_settings',$settings);
+$settings=Decka_DB::settings();$settings['max_per_fan']=470;update_option('decka_settings',$settings);
 function decka_paid_session($id){$o=Decka_Service::order($id);return ['id'=>$o->session_id,'client_reference_id'=>(string)$id,'metadata'=>['decka_order'=>(string)$id],'livemode'=>false,'currency'=>'pln','amount_total'=>(int)$o->total,'payment_status'=>'paid','payment_intent'=>'pi_ci_'.$id];}
 Decka_Service::settle(decka_paid_session($o['order_id']),'test');Decka_Service::settle(decka_paid_session($o['order_id']),'test');
 decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('tickets').' WHERE order_id='.$o['order_id'])===1,'duplicate settlement issues exactly one ticket');
@@ -287,6 +287,7 @@ $gate=Decka_API::gate_events();decka_check(array_map(fn($e)=>(int)$e->id,$gate)=
 $cashierSeats=[];foreach(Decka_DB::seats()['seats'] as $candidate)if(!(int)$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM '.Decka_DB::table('inventory').' WHERE mode=%s AND event_id IN (0,%d) AND seat_id=%s',Decka_DB::mode(),$earlyMatch,$candidate['id']))){$cashierSeats[]=$candidate['id'];if(count($cashierSeats)===2)break;}
 decka_check(count($cashierSeats)===2,'two cashier fixture seats available');
 $cart=Decka_Cashier::hold(['event_id'=>$earlyMatch,'seat_id'=>$cashierSeats[0],'kind'=>'reduced']);decka_check(count($cart['items'])===1&&$cart['items'][0]['kind']==='reduced','cashier immediately holds selected seat');
+Decka_DB::update('orders',['created_at'=>gmdate('Y-m-d H:i:s',time()-7200)],['id'=>$cart['order_id']]);Decka_Cashier::expire();$cart=Decka_Cashier::cart($earlyMatch);decka_check(count($cart['items'])===1,'cashier selection does not expire after ten minutes');
 $collision=false;try{Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$earlyMatch,'seats'=>[['id'=>$cashierSeats[0],'kind'=>'normal']]]);}catch(RuntimeException $e){$collision=true;}decka_check($collision,'online checkout cannot buy cashier-held seat');
 $sale=Decka_Cashier::confirm(['event_id'=>$earlyMatch,'email'=>'']);$soldOrder=Decka_Service::order($sale['order_id']);decka_check($soldOrder->status==='paid'&&Decka_Service::provider($soldOrder)==='cashier','cashier sale issues paid counter order');
 $oldToken=Decka_Tickets::documents($sale['order_id'])[0]['token'];$exchange=Decka_Cashier::exchange(['event_id'=>$earlyMatch,'old_seat'=>$cashierSeats[0],'new_seat'=>$cashierSeats[1]]);$newToken=Decka_Tickets::documents($sale['order_id'])[0]['token'];decka_check($oldToken!==$newToken&&str_contains($exchange['message'],'Stary kod QR przestał działać'),'seat exchange rotates QR and explains the result');
