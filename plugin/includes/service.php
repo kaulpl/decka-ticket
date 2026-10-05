@@ -1,6 +1,6 @@
 <?php
 final class Decka_Service {
-    public static function provider(object $o):string {return (json_decode($o->stripe_payload??'',true)['provider']??'stripe')==='payu'?'payu':'stripe';}
+    public static function provider(object $o):string {$provider=json_decode($o->stripe_payload??'',true)['provider']??'stripe';return in_array($provider,['stripe','payu','cashier'],true)?$provider:'stripe';}
     public static function number(object $o):string {return 'Z-'.strtoupper(substr(hash('sha256',$o->mode.'|'.$o->id.'|'.$o->request_key),0,16));}
     public static function order(int $id):?object{global $wpdb;return $wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('orders').' WHERE id=%d',$id));}
     public static function create(array $input,bool $voucher=false,string $guestHash=''):array {
