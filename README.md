@@ -1,3 +1,9 @@
+## Wydanie 1.0.0
+
+Wersja 1.0 dodaje pełnoekranowy moduł kasjera pod `/kasjer`, sprzedaż biletów normalnych, ulgowych i darmowych z natychmiastową blokadą miejsca oraz bezpieczną wymianę miejsc z unieważnieniem starego kodu QR. Panel administracyjny otrzymał oddzielne dostępy bileterów i kasjerów, dziennik zdarzeń, pełne archiwum danych, raporty PDF oraz dwuetapowy reset systemu. Plan hali rozróżnia sprzedaż internetową i kasową, a generator biletu kończy dokument na paskach sponsorów.
+
+Układ hali jest odczytywany dynamicznie z danych miejsc. Bieżący plik źródłowy zawiera sektory B, C i D; do uruchomienia sprzedaży w A i E potrzebna jest rozpiska numerów, rzędów i położenia miejsc dla tych sektorów.
+
 ## Wydanie 0.9.0
 
 - Dwa niezależne paski: **Sponsorzy główni** i **Sponsorzy**. Wgrywasz je w **Ustawienia → Bilety i e-mail** (JPG/PNG, np. 2480 × 300 px, minimum 7:1). Na PDF są pod miejscem i QR, w tej kolejności, przed informacją o bilecie na telefonie. Te same pliki wyświetlają się pod kafelkami oferty. Dotychczasowy pasek sponsorów zostaje zachowany.

@@ -4,7 +4,7 @@ final class Decka_DB_Error extends RuntimeException {
 }
 final class Decka_Migration_Error extends RuntimeException {}
 final class Decka_DB {
-    public const SCHEMA_VERSION='0.4.0';
+    public const SCHEMA_VERSION='0.4.1';
     private static int $transaction_depth=0;
     private static bool $installing=false;
     private static string $migration_step='start';
@@ -47,6 +47,7 @@ final class Decka_DB {
     }
 
     public static function table(string $name): string {global $wpdb;return $wpdb->prefix.'dect_'.$name;}
+    public static function default_settings():array {return ['mode'=>'test','normal'=>2500,'reduced'=>1500,'league_url'=>'https://rozgrywki.pzkosz.pl/liga/1/druzyny/d/7625/decka-pelplin/terminarz.html','team_id'=>'7625','registration'=>1,'max_per_fan'=>10,'purchase_interval'=>0,'payment_provider'=>'stripe','apple_wallet_enabled'=>0,'google_wallet_enabled'=>0];}
     public static function query(string $sql,string $table='query'): int {global $wpdb;self::require_storage();$r=$wpdb->query($sql);if($r===false)self::fail('query',$table);return (int)$r;}
     public static function insert(string $table,array $data): int {global $wpdb;self::require_storage();if(false===$wpdb->insert(self::table($table),$data))self::fail('insert',$table);return (int)$wpdb->insert_id;}
     public static function update(string $table,array $data,array $where):int {
@@ -196,8 +197,11 @@ final class Decka_DB {
         if($preserveGate)self::query("UPDATE $eventsTable SET gate_manual=1 WHERE gate_open IS NOT NULL OR gate_close IS NOT NULL");
         self::migrate_legacy();
         add_role('decka_bileter','Bileter Decka',['read'=>true,'decka_scan'=>true]);
-        if($a=get_role('administrator')){$a->add_cap('decka_scan');$a->add_cap('decka_manage');}
-        add_option('decka_settings',['mode'=>'test','normal'=>2500,'reduced'=>1500,'league_url'=>'https://rozgrywki.pzkosz.pl/liga/1/druzyny/d/7625/decka-pelplin/terminarz.html','team_id'=>'7625','registration'=>1],'','no');
+        add_role('decka_kasjer','Kasjer Decka',['read'=>true,'decka_cashier'=>true]);
+        if($r=get_role('decka_bileter')){$r->add_cap('read');$r->add_cap('decka_scan');}
+        if($r=get_role('decka_kasjer')){$r->add_cap('read');$r->add_cap('decka_cashier');}
+        if($a=get_role('administrator')){$a->add_cap('decka_scan');$a->add_cap('decka_cashier');$a->add_cap('decka_manage');}
+        add_option('decka_settings',self::default_settings(),'','no');
         update_option('decka_schema_version',self::SCHEMA_VERSION,false);
         if(!wp_next_scheduled('decka_maintenance'))wp_schedule_event(time()+60,'decka_minute','decka_maintenance');
     }

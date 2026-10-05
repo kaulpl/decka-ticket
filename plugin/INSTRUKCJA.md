@@ -1,17 +1,92 @@
-# Decka Bilety 0.3.1
+## Wydanie 1.0.0
+
+Wersja 1.0 dodaje pełnoekranowy moduł kasjera pod `/kasjer`, sprzedaż biletów normalnych, ulgowych i darmowych z natychmiastową blokadą miejsca oraz bezpieczną wymianę miejsc z unieważnieniem starego kodu QR. Panel administracyjny otrzymał oddzielne dostępy bileterów i kasjerów, dziennik zdarzeń, pełne archiwum danych, raporty PDF oraz dwuetapowy reset systemu. Plan hali rozróżnia sprzedaż internetową i kasową, a generator biletu kończy dokument na paskach sponsorów.
+
+Układ hali jest odczytywany dynamicznie z danych miejsc. Bieżący plik źródłowy zawiera sektory B, C i D; do uruchomienia sprzedaży w A i E potrzebna jest rozpiska numerów, rzędów i położenia miejsc dla tych sektorów.
+
+## Wydanie 0.9.0
+
+- Dwa niezależne paski: **Sponsorzy główni** i **Sponsorzy**. Wgrywasz je w **Ustawienia → Bilety i e-mail** (JPG/PNG, np. 2480 × 300 px, minimum 7:1). Na PDF są pod miejscem i QR, w tej kolejności, przed informacją o bilecie na telefonie. Te same pliki wyświetlają się pod kafelkami oferty. Dotychczasowy pasek sponsorów zostaje zachowany.
+- Mini-karnet pokazuje cenę normalną i ulgową z porównaniem oraz listę „vs · logo · przeciwnik”. PDF zawiera lokalne logotypy klubów przed nazwami i nie dopisuje „wykorzystany” po skanowaniu. Unieważnienie biletu pozostaje oznaczone. Przy długich pakietach lista jest w dwóch kolumnach, a grafika meczu mniejsza, aby zachować jedną stronę A4.
+- Przyciski powrotu do wszystkich meczów i całej hali są niebieskie, z białym tekstem oraz czerwoną dolną krawędzią.
+- **SMTP dla biletów**: w tej samej zakładce włącz transport, wpisz serwer, login i hasło od operatora poczty, wybierz port 587/STARTTLS albo 465/TLS i zapisz. Następnie użyj **Sprawdź połączenie SMTP**. Test potwierdza połączenie i logowanie, nie wysyła wiadomości i nie potwierdza dostarczalności do skrzynki.
+- SMTP obsługuje wyłącznie wiadomości z biletami. Wyłączony korzysta z dotychczasowego `wp_mail`; włączony używa oddzielnego PHPMailer z weryfikacją certyfikatu. Nie nadpisuje globalnego mailera WordPressa. Przy błędzie nie przełącza się potajemnie na inny transport; zamówienie pozostaje w kolejce ponownej wysyłki. Hasło jest szyfrowane, nie wraca do przeglądarki, puste pole zachowuje poprzednie hasło. Konfiguracja i test SMTP wymagają administratora WordPressa.
+- Nadawca pozostaje **Bilety Decka Pelplin <bilety@deckapelplin.pl>**, odpowiedzi trafiają do **biuro@deckapelplin.pl**. Skrzynka musi istnieć u operatora i zezwalać na tego nadawcę. Aktualizacja nie tworzy skrzynki ani nie zmienia rekordów DNS. Nie wymaga migracji tabel. Już wysłane załączniki pozostają bez zmian.
+
+## Wydanie 0.8.0
+
+- Skaner wybiera najbliższy mecz według daty rozpoczęcia, także gdy administrator nie ustawił jeszcze godzin wejścia. „Zmień mecz” otwiera listę przyszłych oraz dzisiejszych spotkań z trwającym oknem wejścia. Minione dni i odwołane mecze są pomijane. Zmiana pozostaje zachowana przy odświeżaniu licznika; skanowanie nadal wymaga prawidłowego okna wejścia.
+- Mobilna strona ma mniejszy hero, uproszczony nagłówek oraz duże B/C/D i linie rozdzielające sektory. Usunięto pasek kroków i moduł korzyści. Mini-karnety pokazują osobno cenę normalną i ulgową wraz z porównaniem cen pojedynczych meczów.
+- Wtyczka zawiera 16 logotypów z oficjalnej strony https://1lm.pzkosz.pl/druzyny.html (sezon 2026/2027, pobrano 04.10.2026). Dopasowanie po pełnej nazwie drużyny; ręcznie ustawiony adres logo ma pierwszeństwo. Źródła zapisano w `plugin/data/opponents.json`. Znaki należą do odpowiednich klubów.
+- Wiadomość HTML: podziękowanie, numer zamówienia, podsumowanie meczów i miejsc, prywatny przycisk pobierania oraz PDF w załączniku. Nadawca: **Bilety Decka Pelplin <bilety@deckapelplin.pl>**, Reply-To: **biuro@deckapelplin.pl**. Hosting/SMTP musi dopuszczać ten adres i nie nadpisywać go wymuszonym nadawcą. Wtyczka nie tworzy skrzynki i nie zmienia DNS/SMTP.
+- Przycisk w e-mailu ma osobny, trwały podpis związany z zamówieniem. Nie wymaga sesji ani konta gościa i nie wygasa po 15 minutach. Daje dostęp do PDF jak sam załącznik — nie należy udostępniać linku. Zamówienia nieopłacone i zwrócone nadal nie udostępniają biletu.
+- Ustawienia → Bilety i e-mail: wgranie/usunięcie poziomego paska sponsorów JPG/PNG, np. **2480 × 300 px**, proporcja minimum 7:1. Pasek zajmuje całą szerokość A4; treść zostaje dopasowana, aby uniknąć nakładania. Wgraj gotową kompozycję z marginesami w samym pliku. Po wgraniu zapisz ustawienia. Już wysłanych załączników aktualizacja nie zmienia.
+
+## Wydanie 0.7.0
+
+- Naprawiono adres „Aktualizuj teraz”: parametry i nonce aktualizacji są przekazywane jako URL, bez kodowania HTML `&amp;`. Jeżeli masz jeszcze starszą wersję z uszkodzonym przyciskiem, aktualizuj przez **WordPress → Wtyczki → Zainstalowane wtyczki → Decka Bilety → Aktualizuj teraz** albo wgraj ZIP nowego wydania.
+- Moje konto: zamówienia rozwijane, nagłówek z przeciwnikiem, datą i statusem. Po rozwinięciu miejsca, bilety i pobieranie PDF.
+- Administracyjny plan hali: wolne miejsca jasnoniebieskie, zaznaczone ciemnoniebieskie. Kliknięcie myszą nie dodaje obramowania; obsługa klawiatury zachowuje widoczny fokus.
+- Ustawienia → Płatności: osobne rozwijane sekcje Stripe i PayU oraz wybór operatora nowych zamówień. Rozpoczęte płatności zachowują operatora. Nie ma nowej migracji tabel.
+
+### Konfiguracja PayU Europe
+
+1. Utwórz punkt płatności **REST API** w PayU i włącz automatyczne odbieranie płatności.
+2. W sekcji PayU wpisz **POS ID, OAuth Client ID, OAuth Client secret i drugi klucz (MD5)**. Sandbox i produkcja mają oddzielne pola; sekrety są szyfrowane w bazie i nie wracają do przeglądarki.
+3. Wybierz PayU jako aktywnego operatora, wybierz środowisko w Sprzedaży i zapisz. Przycisk sprawdzania weryfikuje OAuth zapisanej konfiguracji; nie potwierdza poprawności drugiego klucza ani faktycznej płatności.
+4. Publiczny adres powiadomień `/wp-json/decka/v1/payu/webhook/test` lub `/live` wtyczka przekazuje w każdym zamówieniu. Wyklucz go z cache i blokad logowania/WAF. Bilety wydawane są po zweryfikowaniu podpisu i statusu **COMPLETED** przez API; powrót przeglądarki sam nie potwierdza zapłaty.
+5. Wykonaj zakup w sandbox: płatność, e-mail/PDF, ponowione powiadomienie, anulowanie i zwrot w panelu PayU. Powiadomienie o sfinalizowanym zwrocie (także częściowym) unieważnia całe zamówienie; miejsca pozostają zablokowane do decyzji administratora. Wtyczka nie inicjuje zwrotu pieniędzy.
+6. Rezerwacja trwa 10 minut. Miejsca są zwalniane po potwierdzeniu anulowania przez PayU. Przy awarii API lub niejednoznacznym utworzeniu płatności blokada pozostaje do potwierdzenia operatora; identyfikator zewnętrzny nie jest zmieniany przy ponowieniu. Hosting powinien uruchamiać zadania WordPress co minutę.
+
+Integracja zweryfikowana lokalnymi odpowiedziami testowymi; odbiór na koncie PayU klubu pozostaje konieczny. Dokumentacja: [tworzenie płatności](https://developers.payu.com/europe/docs/payment-flows/auth-and-order/), [powiadomienia](https://developers.payu.com/europe/docs/payment-flows/lifecycle/), [zwroty](https://developers.payu.com/europe/docs/payment-flows/refunds/).
+
+## Wydanie 0.5.1
+
+Diagnostyka Stripe akceptuje końcowy ukośnik adresu webhooka i przeszukuje kolejne strony listy endpointów. Rozróżnia brak adresu, wyłączony webhook i brakujące zdarzenia, podając konkretne informacje do poprawy w Stripe. Nadal wymaga jednego aktywnego endpointu ze wszystkimi zdarzeniami; nie łączy konfiguracji endpointów o różnych sekretach.
+
+## Wydanie 0.5.0
+
+- Google loguje istniejące połączone konto; zweryfikowane adresy Gmail/Workspace łączą się z istniejącym kontem bez hasła. Dla adresu spoza hostingu Google pierwsze połączenie wymaga jednorazowego linku e-mail w tej samej przeglądarce. Podpis, wystawca, odbiorca, nonce, state i PKCE nadal są weryfikowane. Źródło zasad zaufania: https://developers.google.com/identity/sign-in/web/backend-auth.
+- **Przed użyciem Google dodaj w Google Cloud → OAuth client → Authorized redirect URIs dokładnie `https://deckapelplin.pl/konto/google/powrot/`.** Wtyczka pokazuje właściwy adres dla swojej domeny w Ustawienia → Konta kibiców. Stary adres można zachować jako dodatkowy podczas aktualizacji. Nowe logowania korzystają z publicznych tras `/konto/google/start/` i `/konto/google/powrot/`; nie są to strony WordPressa do ręcznego tworzenia. Wyklucz `/konto/google/*` z cache/CDN.
+- Rejestracja zbiera imię, nazwisko, ulicę, numer domu, opcjonalny numer mieszkania, polski kod pocztowy, miejscowość, telefon i e-mail. Nowe konto Google uzupełnia dane przed zakupem. Dane adresowe pozostają prywatnymi danymi konta; zakup gościnny zachowuje dotychczasowy krótki formularz.
+- Bilety mają stabilny numer `DK-000000001` i kod kreskowy Code 128 w PDF. Mini-karnet używa jednego numeru dla miejsca we wszystkich swoich meczach. Numer identyfikuje dokument, a **wejście nadal weryfikuje podpisany QR**, nie sam numer biletu. Istniejące QR pozostają bez zmian. Ponowne pobranie PDF dodaje kod kreskowy także do starszych biletów.
+- Szczegóły zamówienia grupują miejsca pod meczem z datą, halą, sektorem, rzędem, numerem miejsca i numerem biletu. Filtr meczu znajduje się w treści nad danymi; kafle administracyjne pokazują całą grafikę 1920:1008.
+- Usunięcie biletera odbiera tylko dostęp do skanera — również administratorowi — bez usuwania konta i pozostałych ról. Dostęp można przywrócić wyszukaniem konta.
+- Skaner wybiera jeden najbliższy nieodwołany mecz z niewygasłym oknem wejścia, preferując mecz już otwarty. Pokazuje licznik poprawnych wejść / ważnych wydanych biletów (płatne, bezpłatne, vouchery); odświeża go po skanie i co 5 sekund. Przed otwarciem wejścia kamera jest wyłączona.
+- Przy limicie REST API GitHuba aktualizator pobiera publiczny manifest wydania bez tego limitu. Zachowuje weryfikację wersji, nazwy paczki, wymagań i sumy SHA-256.
+
+## Wydanie 0.4.0
+
+- Główna aplikacja działa samodzielnie pod `/bilety/`, bez nagłówka motywu WordPressa; skaner pod `/skaner/`. Poprzednie adresy przekierowują na nowe. Wyklucz te dwie ścieżki i API `decka/v1` z cache stron/CDN.
+- Zakup gościnny: e-mail, imię, nazwisko, opcjonalny telefon. Konto nie jest tworzone. Zamówienia i pobrania w tej przeglądarce chroni losowy identyfikator w ciasteczku HttpOnly oraz powiązane zabezpieczenie żądań. E-mail sam nie daje dostępu do zamówień. Bilet przychodzi w załączniku po potwierdzonej płatności; bezpłatne bilety i vouchery nie wymagają płatności.
+- Kafle meczów mają ograniczoną szerokość i pokazują całą grafikę w proporcji 1920:1008. PDF dopasowuje wysokość grafiki do proporcji i mieści bilet na jednej stronie A4 (skrajnie wysokie obrazy są proporcjonalnie zmniejszane).
+- Synchronizacja ustawia wejście od 2 godzin przed rozpoczęciem do 2 godzin po rozpoczęciu meczu. Ręcznie zmienione godziny mają pierwszeństwo. Edycja meczu pozwala wrócić do automatycznych godzin. Zmiana terminu nadal zamyka sprzedaż do ponownego otwarcia przez klub.
+- Raporty obejmują normalne, ulgowe, vouchery, bezpłatne, oczekujące, sprzedaż, wejścia i przychody per mecz. Wykresy zapełnienia dotyczą 340 miejsc B/C/D, a nie wszystkich miejsc fizycznych w hali.
+- Aktualizację można zainstalować przyciskiem przez standardowy, chroniony mechanizm WordPressa. Diagnostyka Stripe odczytuje aktywne środowisko, klucz API i konfigurację webhooka; osobno pokazuje, czy odebrano już poprawnie podpisany webhook. Nie tworzy transakcji i nie zastępuje próby płatności BLIK na hostingu.
+- Apple Wallet i Google Wallet mają osobne przełączniki. Wyłączenie ukrywa konfigurację i wyłącza wydawanie portfeli; zapisane klucze pozostają zachowane.
+- Zespół bileterów: wyszukiwanie po fragmencie imienia/nazwiska/loginu/e-maila, nadawanie oraz usuwanie dostępu bez kasowania konta kibica. Skaner nie ma ręcznego wpisywania kodu; wynik pokazuje przez 2 sekundy, następnie wraca do kamery. Zielony oznacza wejście, żółty wykorzystany bilet, niebieski inny mecz, czerwony pozostałe błędy.
+
+## Wydanie 0.3.6
+
+- Migracja rozdziela kolizje `request_once` ze starej bazy, także wynikające z różnych reguł porównywania tekstu. Najstarsze zamówienie zachowuje dotychczasowy klucz ponowienia, kolejne otrzymują deterministyczne klucze techniczne. Identyfikatory zamówień, płatności, bilety i QR pozostają bez zmian; źródłowe tabele nie są modyfikowane. Raport podaje liczbę zmienionych kluczy. Każdy inny konflikt nadal bezpiecznie wycofuje całą migrację.
+- Ustawienia podzielono na siedem kategorii: Sprzedaż, Płatności, Konta kibiców, Bilety i e-mail, Portfele, Liga, System. Edycja pozostaje bezpośrednio na stronie, ze wspólnym przyciskiem zapisu. Zmiana zakładki zachowuje wpisane wartości.
+- W Ustawienia → System bieżący stan bazy i zalecane działanie są na górze. Historia, struktura tabel i JSON są schowane w szczegółach. Przycisk „Pobierz raport” zapisuje diagnostykę bez danych klientów i kluczy Stripe.
+- Przy niedokończonej migracji użyj „Ponów migrację”. „Sprawdź stan bazy” wykonuje wyłącznie diagnozę. Aktualizacje i zadania w tle mają oddzielne karty.
+
+# Decka Bilety 0.8.0
 
 Wtyczka WordPress z interfejsem Next.js, mapą 340 miejsc z pliku Miejsca-Decka-Online.xlsx, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
-1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.3.1.zip`. Aktywuj wtyczkę.
+1. Na kopii testowej strony wybierz **Wtyczki → Dodaj wtyczkę → Wyślij wtyczkę na serwer** i wskaż `decka-bilety-0.8.0.zip`. Aktywuj wtyczkę.
 2. Wymagania: WordPress 6.6+, PHP 8.2+, MySQL/MariaDB z InnoDB, HTTPS, rozszerzenia PHP OpenSSL, cURL, DOM, mbstring, GD i zlib; dla Apple Wallet także ZIP. Wtyczka zawiera bibliotekę PDF i zbudowany interfejs — na hostingu nie trzeba instalować Node.js, Next.js ani Composera. Przy zbyt niskim limicie uploadu rozpakuj paczkę i prześlij folder `decka-bilety` do `wp-content/plugins/`.
-3. Utwórz stronę **Bilety** z blokiem Krótki kod: `[decka_bilety]`.
-4. Skaner działa pod adresem **/bileter** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
+3. Sprzedaż działa bezpośrednio pod **/bilety/** bez nagłówka motywu. Nie trzeba tworzyć strony WordPress. Krótki kod `[decka_bilety]` pozostaje dostępny do osadzenia na innych stronach.
+4. Skaner działa pod adresem **/skaner/** (logowanie kontem obsługi). Nie trzeba tworzyć strony WordPress.
 5. Ustaw w WordPressie politykę prywatności, a w **Decka Bilety → Ustawienia** adres regulaminu sprzedaży.
 6. Skonfiguruj niezawodną wysyłkę SMTP w WordPressie. PDF jest przekazywany do `wp_mail` jako załącznik; pozytywna odpowiedź oznacza przyjęcie przez system pocztowy, nie gwarancję doręczenia do skrzynki.
 7. Zapewnij wywoływanie WP-Cron co minutę przez harmonogram hostingu. Kolejka sprawdza płatności, zwalnia potwierdzone wygasłe sesje i wysyła bilety. Przycisk **Sprawdź płatności i kolejkę e-mail** pozwala uruchomić ją ręcznie. Na stronie bez ruchu sam WP-Cron może reagować z opóźnieniem.
-8. Wyłącz cache dla `wp-admin/admin-post.php?action=decka_app`, `wp-json/decka/v1/*` oraz pobierania PDF. Strony z krótkim kodem mogą być cache'owane, ale sam osadzony interfejs i API muszą pozostawać dynamiczne.
+8. Wyłącz cache stron/CDN dla `/bilety/`, `/skaner/`, `wp-admin/admin-post.php?action=decka_app`, `wp-json/decka/v1/*` oraz pobierania PDF. Strony z krótkim kodem mogą być cache'owane, ale sam osadzony interfejs i API muszą pozostawać dynamiczne.
 
 ## Stripe — test i produkcja
 
@@ -40,7 +115,7 @@ Potwierdzenie na stronie powrotu ze Stripe nie wystarcza do wystawienia biletu. 
 - Najpierw widać plan hali z kropkami; kliknięcie sektora otwiera widok z numerami. Na małym telefonie powiększony sektor można przesuwać poziomo.
 - Klient widzi tylko wolne i zajęte miejsca oraz swój wybór. Panel klubu zachowuje osobne kolory opłaconych, oczekujących, voucherów i blokad.
 - Dostępność odświeża się co 8 sekund, a serwer sprawdza ją ponownie podczas zakupu. Brak połączenia wyłącza możliwość wyboru.
-- Maksymalnie 10 miejsc w jednym zamówieniu. Wybór w koszyku nie blokuje miejsc; blokada następuje przy tworzeniu płatności po zalogowaniu.
+- Maksymalnie 10 miejsc w jednym zamówieniu. Wybór w koszyku nie blokuje miejsc; blokada następuje przy tworzeniu płatności po podaniu danych gościa lub zalogowaniu.
 - Sesja Checkout trwa około **31 minut**. Miejsce jest zwalniane dopiero po potwierdzeniu wygaśnięcia/anulowania przez Stripe, a nie po samym upływie lokalnego zegara. Przy niejednoznacznym błędzie sieci blokada pozostaje, a wtyczka ponawia zapytanie z tym samym kluczem operacji.
 
 ## Mecze i rozpoczęcie sprzedaży
@@ -146,7 +221,7 @@ Każdy mecz może mieć grafikę JPG/PNG (do 8 MB i 6000 px), pokazywaną na kaf
 
 **Stripe:** `sk_test_…` / `sk_live_…` to klucz serwera. `pk_…` jest kluczem publicznym i w tym modelu przekierowania Checkout nie jest potrzebny. `whsec_…` nie znajduje się na liście kluczy API: w Stripe otwórz **Workbench → Webhooks → Add destination**, wybierz swoje konto i zdarzenia snapshot wymienione powyżej, wpisz URL ze strony ustawień, zapisz i odsłoń **Signing secret**. Osobno skonfiguruj test i produkcję. [Dokumentacja Stripe](https://docs.stripe.com/webhooks).
 
-**Logowanie Google:** w Google Cloud skonfiguruj ekran zgody OAuth i klienta typu Web application. Wklej Client ID i Client secret do ustawień wtyczki. Authorized redirect URI musi być dokładnie adresem pokazanym w panelu, np. `https://deckapelplin.pl/wp-admin/admin-post.php?action=decka_google_callback`. Nowi kibice mogą zarejestrować się przez Google; istniejący logują się hasłem i wybierają „Połącz konto Google”. Nie łączymy kont automatycznie wyłącznie po zgodnym e-mailu. [Google OIDC](https://developers.google.com/identity/openid-connect/openid-connect).
+**Logowanie Google:** w Google Cloud skonfiguruj ekran zgody OAuth i klienta typu Web application. Wklej Client ID i Client secret do ustawień wtyczki. Authorized redirect URI musi być dokładnie adresem pokazanym w panelu, np. `https://deckapelplin.pl/konto/google/powrot/`. Nowi kibice po autoryzacji Google uzupełniają dane kontaktowe. Istniejący wybierają „Zaloguj za pomocą Google”; opcja „Połącz konto Google” na koncie pozwala też świadomie powiązać inną tożsamość Google. Istniejące konta z potwierdzonym adresem Gmail/Workspace są łączone automatycznie; inne adresy wymagają jednorazowego potwierdzenia e-maila. [Google OIDC](https://developers.google.com/identity/openid-connect/openid-connect).
 
 **Apple Wallet:** potrzebne aktywne konto Apple Developer, Pass Type ID, Team ID, certyfikat Pass Type i odpowiadający mu klucz prywatny w PEM oraz aktualny certyfikat pośredni Apple WWDR. Pola są w ustawieniach, sekrety są szyfrowane. Serwer generuje podpisany plik `.pkpass`, a nie przemianowany PDF. [Certyfikaty Apple](https://developer.apple.com/help/account/capabilities/create-wallet-identifiers-and-certificates/).
 
@@ -164,3 +239,58 @@ Wydanie ponawia aktualizację struktury bazy i sprawdza obecność wymaganych ko
 Jeśli zapis zamówienia zostanie odrzucony, klient otrzyma kod `DB-ORDERS-…`, `DB-INVENTORY-…` albo `DB-ITEMS-…`. Odpowiadający mu ostatni błąd (czas, etap, kategoria i nazwa pola, jeśli rozpoznana) znajduje się w sekcji Baza danych. Diagnoza jest zapisywana po wycofaniu transakcji, dzięki czemu nie znika razem z nieudanym zamówieniem. Nie zapisujemy w niej zapytania SQL, danych kibica ani sekretów Stripe. Nieudany zapis nie jest automatycznie ponawiany i nie rozpoczyna płatności.
 
 Brak kolumn można naprawić ponowną aktualizacją struktury. Brak uprawnień, dodatkowe wymagane kolumny, błędy kodowania lub ograniczenia hostingu wymagają działania na podstawie wskazanej kategorii. Nie należy zakładać, że sam komunikat zapisu oznacza błędne klucze Stripe. Zgłoszonego błędu konkretnego hostingu nie odtworzono na czystym MySQL; to wydanie dostarcza naprawę niepełnej migracji oraz diagnostykę potrzebną do dalszego ustalenia przyczyny.
+
+## Naprawa konfliktu unikatowego zapisu (0.3.2)
+
+Nowe zamówienie zapisuje brak sesji Stripe jako SQL NULL. Aktualizacja naprawia również starszą definicję pola `session_id` (NOT NULL lub domyślne puste ciągi) i zamienia wyłącznie puste identyfikatory sesji na NULL. Zachowuje zamówienia, bilety, niepuste identyfikatory Stripe i indeks unikatowy. Migracja uruchamia się po aktualizacji; można ją ponowić w Ustawienia → Baza danych.
+
+Diagnostyka konfliktu pokazuje teraz nazwę indeksu, bez wartości powodującej konflikt. Sam komunikat z wersji 0.3.1 nie wskazuje, który indeks zawiódł: naprawa dotyczy odtworzonego scenariusza pustej sesji, a jej skuteczność na hostingu wymaga ponowienia zakupu. Jeżeli błąd pozostaje, przekaż kod oraz pole „Indeks” z nowego wpisu. Nie usuwaj zamówień ani indeksów unikatowych.
+
+Poprawiono również formatowanie definicji tabel dla dbDelta: przecinki w domyślnym adresie hali nie są dzielone na osobne definicje kolumn.
+
+## Baza dect_ i pełna kontrola zapisu (0.3.3)
+
+Wtyczka używa teraz własnych tabel `{prefiks WordPressa}dect_*` (np. `wp_dect_orders`). Aktualizacja tworzy osiem tabel na podstawie aktualnego schematu i jednorazowo przenosi wspólne kolumny z `{prefiks WordPressa}decka_*`. Nie kopiuje obcych pól, indeksów ani triggerów, w tym zgłoszonego `order_number`. Stare tabele i dodatkowe dane pozostają nienaruszone. Nie potwierdzono, z jakiej wtyczki pochodził ten indeks.
+
+Migracja zachowuje identyfikatory, kwoty, kody QR, sesje Stripe, rezerwacje, statusy oraz historię wejść. Porównuje liczbę i wartości kopiowanych rekordów. Wszystkie dane i znacznik przełączenia zatwierdza w jednej transakcji; błąd wycofuje kopiowanie, blokuje zakup i nie usuwa źródła. Nie nadpisuje niepustych tabel docelowych i nie powtarza kopiowania po udanym przełączeniu. Od 0.3.5 znacznik migracji jest zatwierdzany w dedykowanej tabeli InnoDB `dect_state`; tabela opcji WordPressa może pozostać MyISAM. Ustawienia i konta WordPressa pozostają bez zmiany nazw.
+
+Aktualizację wykonaj w oknie serwisowym, bez trwających żądań zakupu lub skanowania ze starej wersji PHP. Po przełączeniu starsza wersja wtyczki nie odczyta nowych transakcji z dect_; nie należy wracać do starego ZIP-a jako metody cofania danych. Stare tabele są archiwum, nie stale synchronizowaną kopią.
+
+Ustawienia → Baza danych pokazują aktywną przestrzeń, wynik migracji i kontrolę wszystkich ośmiu tabel: kolumny, typy, długości, NULL, wartości domyślne, AUTO_INCREMENT, InnoDB oraz indeksy unikatowe. Raport nie zawiera wierszy klientów ani wartości sekretów. Dodatkowe ograniczenia są zgłaszane bez automatycznego usuwania danych.
+
+Kontrolowany jest również zapis odpowiedzi Stripe, danych potwierdzonej płatności, biletów i znaczników wysyłki. Błąd bazy po płatności nie jest uznawany za powodzenie; webhook może ponowić próbę. Testy używają atrap Stripe i poczty — odbiór na hostingu i prawdziwa płatność pozostają osobnym sprawdzeniem.
+
+## Dostęp do diagnostyki przed migracją (0.3.4)
+
+Przycisk „Sprawdź pełną strukturę” nie zapisuje historii w tabeli audit. Dzięki temu działa także przed zakończeniem migracji i przy uszkodzonej tabeli historii. Ustawienia można zapisać przed migracją bez próby zapisu do jeszcze zablokowanych tabel. Komunikat blokady informuje o nieukończonym przełączeniu, zamiast sugerować, że migracja cały czas trwa.
+
+Kontrola struktury jest odczytem; nie wykonuje migracji. Aby ponowić migrację i zobaczyć konkretny powód jej niepowodzenia, użyj „Sprawdź i uzupełnij strukturę bazy”.
+
+## Status migracji i odzyskiwanie po błędzie (0.3.5)
+
+- „Sprawdź strukturę i stan danych”: odczytuje strukturę oraz liczby rekordów w źródle i celu. Aktualizuje raport, bez kopiowania danych.
+- „Napraw strukturę i ponów migrację”: tworzy/uzupełnia tabele, sprawdza je i przenosi dane. Ponowienie nie nadpisuje niepustego celu. Po sukcesie przycisk nazywa się „Sprawdź i napraw aktywną bazę”.
+- Wynik „Pola i indeksy nowych tabel są zgodne” nie oznacza zakończenia migracji. Decydujący jest status „Nowa baza jest aktywna”.
+- Nieudana próba zapisuje konkretny etap, tabelę, bezpieczną przyczynę i czas. Raport odświeża się także po nieudanej operacji. Stary błąd zapisu jest wyraźnie oznaczony jako historyczny.
+
+Poprzedni migrator niepotrzebnie wymagał InnoDB dla wp_options. Teraz własny znacznik dect_state jest zatwierdzany razem z danymi, a opcja WordPressa jest tylko kopią dla zgodności. Jeśli jej aktualizacja lub pamięć podręczna zawiedzie, wtyczka rozpoznaje zatwierdzenie we własnej tabeli i nie kopiuje danych drugi raz. Kod nie zmienia silnika tabel WordPressa.
+
+Podczas nieukończonej migracji klient otrzymuje komunikat o czasowej niedostępności sprzedaży i HTTP 503, zamiast ogólnego błędu pobierania oferty. Przyczyna konkretnego hostingu wymaga odczytu wyniku migracji — poprawny raport struktury nie wskazuje, na którym etapie zatrzymał się transfer.
+
+### Weryfikacja interfejsu 0.4.0
+
+Po zbudowaniu frontendu uruchom `node tests/shop-ui.mjs`, `node tests/scanner-ui.mjs` i `node tests/settings-ui.mjs` z dostępnym Playwright/Chromium. Opcjonalne zmienne `DECKA_PLAYWRIGHT_MODULE` i `CHROME_PATH` wskazują lokalną instalację. Testy korzystają z izolowanych odpowiedzi API. Sprawdzają zakup gościnny, brak PDF przed płatnością, proporcje kafelków, obliczenia raportów, przełączniki portfeli i dynamiczne wyszukiwanie bileterów. Test skanera dekoduje prawdziwy QR z syntetycznego obrazu kamery i sprawdza cztery stany oraz automatyczne wznowienie po 2 sekundach. Nie zastępuje to sprawdzenia aparatu na fizycznym telefonie.
+
+Test odczytu kodów z PDF: wyrenderuj stronę w 288–300 dpi i uruchom `QR_IMAGE=/sciezka/strona.png BARCODE_EXPECTED=DK-000000002 node tests/qr.mjs` z numerem i plikiem `tests/expected-qr.txt` właściwymi dla testowego dokumentu. Test porównuje odczyt QR i Code 128 z oczekiwanymi wartościami.
+
+## 0.6.0 — konto kibica, rezerwacje i mini-karnety
+
+- Konto kibica z danymi kontaktowymi, Google i biletami pogrupowanymi według miejsc oraz meczów. Hasło od 8 znaków, statusy płatności, świeże podpisane linki PDF (15 minut).
+- Publiczne numery biletów i zamówień są stabilnymi losowymi ciągami opartymi na istniejącym losowym identyfikatorze. Identyfikatory bazy i QR nie są zmieniane; nie jest potrzebna migracja tabel.
+- Rezerwacja: 10 minut od utworzenia zamówienia. Wtyczka aktywnie zamyka otwartą sesję Stripe i dopiero po potwierdzeniu zwalnia miejsce. Ukończona płatność wygrywa wyścig z wygaszaniem. Błąd sieci lub płatność nadal przetwarzana zachowuje blokadę do wyjaśnienia. Stripe nie dopuszcza parametru expires_at krótszego niż 30 minut.
+- **Hosting musi uruchamiać zadania WordPress co minutę** (np. `wp cron event run --due-now`). Sam WP-Cron zależy od ruchu; nie gwarantuje czasu wykonania. Zadanie jednorazowe po 10 minutach oraz kontrola co minutę korzystają z tej samej bezpiecznej logiki.
+- Plan hali: wolne, zablokowane (widoczne), ukryte i kamera. „Wszystkie mecze” zapisuje także domyślne ustawienie przyszłych meczów. Zakupione i zarezerwowane miejsca są chronione. Aby cofnąć makro, wybierz „Wszystkie mecze” i zwolnij blokadę.
+- Mini-karnety: grafika, lista przeciwników, logotypy podane w edycji meczu, ceny i oszczędności. Dozwolone kody wybiera się w edycji pakietu; pusta lista wyłącza kody, także po stronie serwera.
+- Podgląd rabatu nie rezerwuje miejsc ani wykorzystania kodu; ostateczna dostępność i rabat są ponownie sprawdzane w transakcji zakupu.
+- Limit odstępu zakupów dotyczy tego samego e-maila i meczu, także gości; 0 wyłącza ograniczenie.
+- PDF informuje o wejściu godzinę przed meczem. Okno skanera pozostaje bez zmian.
