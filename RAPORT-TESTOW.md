@@ -6,7 +6,7 @@ Data: 30 września 2026 r. Wydanie do odbioru na środowisku testowym.
 
 ### Dane i logika — 20 zakończonych powodzeniem sprawdzeń
 
-- Zgodność liczby miejsc z Excelem: B 105, C 130, D 105, razem 340; identyfikatory unikatowe.
+- Plan hali: A 65, B 105, C 130, D 105, E 65, razem 470; identyfikatory unikatowe.
 - Osiem pól KAMERA poza sprzedażą; zachowane położenie komórek.
 - Podział groszy w mini-karnetach i naliczanie rabatów procentowych/kwotowych.
 - Odrzucanie błędnej wartości rabatu.

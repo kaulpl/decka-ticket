@@ -12,7 +12,7 @@ final class Decka_Admin_API {
             ['stripe/check','POST',fn()=>Decka_Stripe::health()],
             ['smtp/check','POST',fn()=>Decka_Mail::check()],
             ['payu/check','POST',fn()=>Decka_Payu::health()],
-            ['gate','GET',fn($r)=>self::gate((int)$r->get_param('event'))],
+            ['gate','GET',fn($r)=>self::gate((int)$r->get_param('event'),max(1,(int)$r->get_param('page')))],
             ['logs','GET',fn($r)=>self::logs($r->get_params())],
             ['inventory','GET',fn($r)=>self::inventory((int)$r->get_param('event'))],
             ['media','POST',fn($r)=>self::media()],
@@ -80,10 +80,13 @@ final class Decka_Admin_API {
         $ids=$wpdb->get_col($wpdb->prepare("SELECT DISTINCT u.ID FROM {$wpdb->users} u LEFT JOIN {$wpdb->usermeta} m ON m.user_id=u.ID AND m.meta_key IN ('first_name','last_name') WHERE u.display_name LIKE %s OR u.user_login LIKE %s OR u.user_email LIKE %s OR m.meta_value LIKE %s ORDER BY u.ID LIMIT 40",$like,$like,$like,$like));
         $rows=[];foreach($ids as $id){$u=get_user_by('id',$id);if($u&&current_user_can('edit_user',$id))$rows[]=['id'=>$u->ID,'name'=>$u->display_name,'email'=>$u->user_email,'enabled'=>user_can($u,'decka_scan')];}return $rows;
     }
-    public static function gate(int $event):array {
-        global $wpdb;$where='';if($event)$where=$wpdb->prepare(' AND ((a.action="scan_accepted" AND t.event_id=%d) OR (a.action="scan_rejected" AND a.object_id=%d))',$event,$event);
-        $rows=$wpdb->get_results($wpdb->prepare('SELECT a.id,a.action,a.object_id,a.detail,a.created_at,u.display_name actor,t.seat_id,e.opponent FROM '.Decka_DB::table('audit').' a LEFT JOIN '.$wpdb->users.' u ON u.ID=a.actor LEFT JOIN '.Decka_DB::table('tickets').' t ON a.action="scan_accepted" AND t.id=a.object_id LEFT JOIN '.Decka_DB::table('orders').' o ON o.id=t.order_id LEFT JOIN '.Decka_DB::table('events').' e ON e.id=t.event_id WHERE ((a.action="scan_accepted" AND o.mode=%s) OR (a.action="scan_rejected" AND a.detail LIKE %s))'.$where.' ORDER BY a.id DESC LIMIT 100',Decka_DB::mode(),'%"mode":"'.Decka_DB::mode().'"%'),ARRAY_A);
-        $staff=[];foreach(get_users(['role__in'=>['decka_bileter','decka_kasjer','administrator'],'number'=>300]) as $u)if(user_can($u,'decka_scan')||user_can($u,'decka_cashier'))$staff[]=['id'=>$u->ID,'name'=>$u->display_name,'email'=>$u->user_email,'administrator'=>in_array('administrator',$u->roles,true),'gate'=>user_can($u,'decka_scan'),'cashier'=>user_can($u,'decka_cashier')];return ['scans'=>$rows,'users'=>$staff];
+    public static function gate(int $event,int $page=1):array {
+        global $wpdb;$limit=15;$offset=($page-1)*$limit;$where='';if($event)$where=$wpdb->prepare(' AND ((a.action="scan_accepted" AND t.event_id=%d) OR (a.action="scan_rejected" AND a.object_id=%d))',$event,$event);
+        $from=' FROM '.Decka_DB::table('audit').' a LEFT JOIN '.$wpdb->users.' u ON u.ID=a.actor LEFT JOIN '.Decka_DB::table('tickets').' t ON a.action="scan_accepted" AND t.id=a.object_id LEFT JOIN '.Decka_DB::table('orders').' o ON o.id=t.order_id LEFT JOIN '.Decka_DB::table('events').' e ON e.id=t.event_id WHERE ((a.action="scan_accepted" AND o.mode=%s) OR (a.action="scan_rejected" AND a.detail LIKE %s))'.$where;
+        $args=[Decka_DB::mode(),'%"mode":"'.Decka_DB::mode().'"%'];$prepared=$wpdb->prepare($from,...$args);
+        $rows=$wpdb->get_results('SELECT a.id,a.action,a.object_id,a.detail,a.created_at,u.display_name actor,t.seat_id,e.opponent'.$prepared.' ORDER BY a.id DESC LIMIT '.$limit.' OFFSET '.$offset,ARRAY_A);
+        $total=(int)$wpdb->get_var('SELECT COUNT(*)'.$prepared);
+        $staff=[];foreach(get_users(['role__in'=>['decka_bileter','decka_kasjer','administrator'],'number'=>300]) as $u)if(user_can($u,'decka_scan')||user_can($u,'decka_cashier'))$staff[]=['id'=>$u->ID,'name'=>$u->display_name,'email'=>$u->user_email,'administrator'=>in_array('administrator',$u->roles,true),'gate'=>user_can($u,'decka_scan'),'cashier'=>user_can($u,'decka_cashier')];return ['scans'=>$rows,'users'=>$staff,'page'=>$page,'page_size'=>$limit,'total'=>$total];
     }
     public static function logs(array $p):array {
         global $wpdb;[$page,$limit,$offset]=self::page($p);$where='1=1';$args=[];if(!empty($p['action'])){$where.=' AND a.action=%s';$args[]=sanitize_key($p['action']);}if(!empty($p['q'])){$like='%'.$wpdb->esc_like(sanitize_text_field($p['q'])).'%';$where.=' AND (a.detail LIKE %s OR u.display_name LIKE %s OR u.user_email LIKE %s)';array_push($args,$like,$like,$like);}$sql=' FROM '.Decka_DB::table('audit').' a LEFT JOIN '.$wpdb->users.' u ON u.ID=a.actor WHERE '.$where;$prepared=$args?$wpdb->prepare($sql,...$args):$sql;return ['rows'=>$wpdb->get_results('SELECT a.*,u.display_name actor_name,u.user_email actor_email'.$prepared.' ORDER BY a.id DESC LIMIT '.$limit.' OFFSET '.$offset,ARRAY_A),'page'=>$page,'page_size'=>$limit,'total'=>(int)$wpdb->get_var('SELECT COUNT(*)'.$prepared)];

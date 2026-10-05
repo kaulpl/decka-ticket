@@ -3062,6 +3062,1176 @@
       "x": 49,
       "y": 13,
       "sourceCell": "AW13"
+    },
+    {
+      "id": "1",
+      "number": 1,
+      "sector": "A",
+      "row": 1,
+      "x": -11,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "2",
+      "number": 2,
+      "sector": "A",
+      "row": 1,
+      "x": -10,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "3",
+      "number": 3,
+      "sector": "A",
+      "row": 1,
+      "x": -9,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "4",
+      "number": 4,
+      "sector": "A",
+      "row": 1,
+      "x": -8,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "5",
+      "number": 5,
+      "sector": "A",
+      "row": 1,
+      "x": -7,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "6",
+      "number": 6,
+      "sector": "A",
+      "row": 1,
+      "x": -6,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "7",
+      "number": 7,
+      "sector": "A",
+      "row": 1,
+      "x": -5,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "8",
+      "number": 8,
+      "sector": "A",
+      "row": 1,
+      "x": -4,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "9",
+      "number": 9,
+      "sector": "A",
+      "row": 1,
+      "x": -3,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "10",
+      "number": 10,
+      "sector": "A",
+      "row": 1,
+      "x": -2,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "11",
+      "number": 11,
+      "sector": "A",
+      "row": 1,
+      "x": -1,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "12",
+      "number": 12,
+      "sector": "A",
+      "row": 1,
+      "x": 0,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "13",
+      "number": 13,
+      "sector": "A",
+      "row": 1,
+      "x": 1,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "14",
+      "number": 14,
+      "sector": "A",
+      "row": 2,
+      "x": -11,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "15",
+      "number": 15,
+      "sector": "A",
+      "row": 2,
+      "x": -10,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "16",
+      "number": 16,
+      "sector": "A",
+      "row": 2,
+      "x": -9,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "17",
+      "number": 17,
+      "sector": "A",
+      "row": 2,
+      "x": -8,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "18",
+      "number": 18,
+      "sector": "A",
+      "row": 2,
+      "x": -7,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "19",
+      "number": 19,
+      "sector": "A",
+      "row": 2,
+      "x": -6,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "20",
+      "number": 20,
+      "sector": "A",
+      "row": 2,
+      "x": -5,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "21",
+      "number": 21,
+      "sector": "A",
+      "row": 2,
+      "x": -4,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "22",
+      "number": 22,
+      "sector": "A",
+      "row": 2,
+      "x": -3,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "23",
+      "number": 23,
+      "sector": "A",
+      "row": 2,
+      "x": -2,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "24",
+      "number": 24,
+      "sector": "A",
+      "row": 2,
+      "x": -1,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "25",
+      "number": 25,
+      "sector": "A",
+      "row": 2,
+      "x": 0,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "26",
+      "number": 26,
+      "sector": "A",
+      "row": 2,
+      "x": 1,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "27",
+      "number": 27,
+      "sector": "A",
+      "row": 3,
+      "x": -11,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "28",
+      "number": 28,
+      "sector": "A",
+      "row": 3,
+      "x": -10,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "29",
+      "number": 29,
+      "sector": "A",
+      "row": 3,
+      "x": -9,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "30",
+      "number": 30,
+      "sector": "A",
+      "row": 3,
+      "x": -8,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "31",
+      "number": 31,
+      "sector": "A",
+      "row": 3,
+      "x": -7,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "32",
+      "number": 32,
+      "sector": "A",
+      "row": 3,
+      "x": -6,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "33",
+      "number": 33,
+      "sector": "A",
+      "row": 3,
+      "x": -5,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "34",
+      "number": 34,
+      "sector": "A",
+      "row": 3,
+      "x": -4,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "35",
+      "number": 35,
+      "sector": "A",
+      "row": 3,
+      "x": -3,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "36",
+      "number": 36,
+      "sector": "A",
+      "row": 3,
+      "x": -2,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "37",
+      "number": 37,
+      "sector": "A",
+      "row": 3,
+      "x": -1,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "38",
+      "number": 38,
+      "sector": "A",
+      "row": 3,
+      "x": 0,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "39",
+      "number": 39,
+      "sector": "A",
+      "row": 3,
+      "x": 1,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "40",
+      "number": 40,
+      "sector": "A",
+      "row": 4,
+      "x": -11,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "41",
+      "number": 41,
+      "sector": "A",
+      "row": 4,
+      "x": -10,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "42",
+      "number": 42,
+      "sector": "A",
+      "row": 4,
+      "x": -9,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "43",
+      "number": 43,
+      "sector": "A",
+      "row": 4,
+      "x": -8,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "44",
+      "number": 44,
+      "sector": "A",
+      "row": 4,
+      "x": -7,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "45",
+      "number": 45,
+      "sector": "A",
+      "row": 4,
+      "x": -6,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "46",
+      "number": 46,
+      "sector": "A",
+      "row": 4,
+      "x": -5,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "47",
+      "number": 47,
+      "sector": "A",
+      "row": 4,
+      "x": -4,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "48",
+      "number": 48,
+      "sector": "A",
+      "row": 4,
+      "x": -3,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "49",
+      "number": 49,
+      "sector": "A",
+      "row": 4,
+      "x": -2,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "50",
+      "number": 50,
+      "sector": "A",
+      "row": 4,
+      "x": -1,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "51",
+      "number": 51,
+      "sector": "A",
+      "row": 4,
+      "x": 0,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "52",
+      "number": 52,
+      "sector": "A",
+      "row": 4,
+      "x": 1,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "53",
+      "number": 53,
+      "sector": "A",
+      "row": 5,
+      "x": -11,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "54",
+      "number": 54,
+      "sector": "A",
+      "row": 5,
+      "x": -10,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "55",
+      "number": 55,
+      "sector": "A",
+      "row": 5,
+      "x": -9,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "56",
+      "number": 56,
+      "sector": "A",
+      "row": 5,
+      "x": -8,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "57",
+      "number": 57,
+      "sector": "A",
+      "row": 5,
+      "x": -7,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "58",
+      "number": 58,
+      "sector": "A",
+      "row": 5,
+      "x": -6,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "59",
+      "number": 59,
+      "sector": "A",
+      "row": 5,
+      "x": -5,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "60",
+      "number": 60,
+      "sector": "A",
+      "row": 5,
+      "x": -4,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "61",
+      "number": 61,
+      "sector": "A",
+      "row": 5,
+      "x": -3,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "62",
+      "number": 62,
+      "sector": "A",
+      "row": 5,
+      "x": -2,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "63",
+      "number": 63,
+      "sector": "A",
+      "row": 5,
+      "x": -1,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "64",
+      "number": 64,
+      "sector": "A",
+      "row": 5,
+      "x": 0,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "65",
+      "number": 65,
+      "sector": "A",
+      "row": 5,
+      "x": 1,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "416",
+      "number": 416,
+      "sector": "E",
+      "row": 1,
+      "x": 51,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "417",
+      "number": 417,
+      "sector": "E",
+      "row": 1,
+      "x": 52,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "418",
+      "number": 418,
+      "sector": "E",
+      "row": 1,
+      "x": 53,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "419",
+      "number": 419,
+      "sector": "E",
+      "row": 1,
+      "x": 54,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "420",
+      "number": 420,
+      "sector": "E",
+      "row": 1,
+      "x": 55,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "421",
+      "number": 421,
+      "sector": "E",
+      "row": 1,
+      "x": 56,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "422",
+      "number": 422,
+      "sector": "E",
+      "row": 1,
+      "x": 57,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "423",
+      "number": 423,
+      "sector": "E",
+      "row": 1,
+      "x": 58,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "424",
+      "number": 424,
+      "sector": "E",
+      "row": 1,
+      "x": 59,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "425",
+      "number": 425,
+      "sector": "E",
+      "row": 1,
+      "x": 60,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "426",
+      "number": 426,
+      "sector": "E",
+      "row": 1,
+      "x": 61,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "427",
+      "number": 427,
+      "sector": "E",
+      "row": 1,
+      "x": 62,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "428",
+      "number": 428,
+      "sector": "E",
+      "row": 1,
+      "x": 63,
+      "y": 13,
+      "sourceCell": null
+    },
+    {
+      "id": "429",
+      "number": 429,
+      "sector": "E",
+      "row": 2,
+      "x": 51,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "430",
+      "number": 430,
+      "sector": "E",
+      "row": 2,
+      "x": 52,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "431",
+      "number": 431,
+      "sector": "E",
+      "row": 2,
+      "x": 53,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "432",
+      "number": 432,
+      "sector": "E",
+      "row": 2,
+      "x": 54,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "433",
+      "number": 433,
+      "sector": "E",
+      "row": 2,
+      "x": 55,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "434",
+      "number": 434,
+      "sector": "E",
+      "row": 2,
+      "x": 56,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "435",
+      "number": 435,
+      "sector": "E",
+      "row": 2,
+      "x": 57,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "436",
+      "number": 436,
+      "sector": "E",
+      "row": 2,
+      "x": 58,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "437",
+      "number": 437,
+      "sector": "E",
+      "row": 2,
+      "x": 59,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "438",
+      "number": 438,
+      "sector": "E",
+      "row": 2,
+      "x": 60,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "439",
+      "number": 439,
+      "sector": "E",
+      "row": 2,
+      "x": 61,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "440",
+      "number": 440,
+      "sector": "E",
+      "row": 2,
+      "x": 62,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "441",
+      "number": 441,
+      "sector": "E",
+      "row": 2,
+      "x": 63,
+      "y": 12,
+      "sourceCell": null
+    },
+    {
+      "id": "442",
+      "number": 442,
+      "sector": "E",
+      "row": 3,
+      "x": 51,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "443",
+      "number": 443,
+      "sector": "E",
+      "row": 3,
+      "x": 52,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "444",
+      "number": 444,
+      "sector": "E",
+      "row": 3,
+      "x": 53,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "445",
+      "number": 445,
+      "sector": "E",
+      "row": 3,
+      "x": 54,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "446",
+      "number": 446,
+      "sector": "E",
+      "row": 3,
+      "x": 55,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "447",
+      "number": 447,
+      "sector": "E",
+      "row": 3,
+      "x": 56,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "448",
+      "number": 448,
+      "sector": "E",
+      "row": 3,
+      "x": 57,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "449",
+      "number": 449,
+      "sector": "E",
+      "row": 3,
+      "x": 58,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "450",
+      "number": 450,
+      "sector": "E",
+      "row": 3,
+      "x": 59,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "451",
+      "number": 451,
+      "sector": "E",
+      "row": 3,
+      "x": 60,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "452",
+      "number": 452,
+      "sector": "E",
+      "row": 3,
+      "x": 61,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "453",
+      "number": 453,
+      "sector": "E",
+      "row": 3,
+      "x": 62,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "454",
+      "number": 454,
+      "sector": "E",
+      "row": 3,
+      "x": 63,
+      "y": 11,
+      "sourceCell": null
+    },
+    {
+      "id": "455",
+      "number": 455,
+      "sector": "E",
+      "row": 4,
+      "x": 51,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "456",
+      "number": 456,
+      "sector": "E",
+      "row": 4,
+      "x": 52,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "457",
+      "number": 457,
+      "sector": "E",
+      "row": 4,
+      "x": 53,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "458",
+      "number": 458,
+      "sector": "E",
+      "row": 4,
+      "x": 54,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "459",
+      "number": 459,
+      "sector": "E",
+      "row": 4,
+      "x": 55,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "460",
+      "number": 460,
+      "sector": "E",
+      "row": 4,
+      "x": 56,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "461",
+      "number": 461,
+      "sector": "E",
+      "row": 4,
+      "x": 57,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "462",
+      "number": 462,
+      "sector": "E",
+      "row": 4,
+      "x": 58,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "463",
+      "number": 463,
+      "sector": "E",
+      "row": 4,
+      "x": 59,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "464",
+      "number": 464,
+      "sector": "E",
+      "row": 4,
+      "x": 60,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "465",
+      "number": 465,
+      "sector": "E",
+      "row": 4,
+      "x": 61,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "466",
+      "number": 466,
+      "sector": "E",
+      "row": 4,
+      "x": 62,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "467",
+      "number": 467,
+      "sector": "E",
+      "row": 4,
+      "x": 63,
+      "y": 10,
+      "sourceCell": null
+    },
+    {
+      "id": "468",
+      "number": 468,
+      "sector": "E",
+      "row": 5,
+      "x": 51,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "469",
+      "number": 469,
+      "sector": "E",
+      "row": 5,
+      "x": 52,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "470",
+      "number": 470,
+      "sector": "E",
+      "row": 5,
+      "x": 53,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "471",
+      "number": 471,
+      "sector": "E",
+      "row": 5,
+      "x": 54,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "472",
+      "number": 472,
+      "sector": "E",
+      "row": 5,
+      "x": 55,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "473",
+      "number": 473,
+      "sector": "E",
+      "row": 5,
+      "x": 56,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "474",
+      "number": 474,
+      "sector": "E",
+      "row": 5,
+      "x": 57,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "475",
+      "number": 475,
+      "sector": "E",
+      "row": 5,
+      "x": 58,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "476",
+      "number": 476,
+      "sector": "E",
+      "row": 5,
+      "x": 59,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "477",
+      "number": 477,
+      "sector": "E",
+      "row": 5,
+      "x": 60,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "478",
+      "number": 478,
+      "sector": "E",
+      "row": 5,
+      "x": 61,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "479",
+      "number": 479,
+      "sector": "E",
+      "row": 5,
+      "x": 62,
+      "y": 9,
+      "sourceCell": null
+    },
+    {
+      "id": "480",
+      "number": 480,
+      "sector": "E",
+      "row": 5,
+      "x": 63,
+      "y": 9,
+      "sourceCell": null
     }
   ],
   "cameras": [
@@ -3108,6 +4278,10 @@
   ],
   "sectors": [
     {
+      "id": "A",
+      "count": 65
+    },
+    {
       "id": "B",
       "count": 105
     },
@@ -3118,6 +4292,10 @@
     {
       "id": "D",
       "count": 105
+    },
+    {
+      "id": "E",
+      "count": 65
     }
   ]
 }
