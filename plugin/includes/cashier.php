@@ -6,17 +6,18 @@ final class Decka_Cashier {
         self::require_access();global $wpdb;$now=gmdate('Y-m-d H:i:s');
         return $wpdb->get_results($wpdb->prepare('SELECT id,opponent,starts_at,venue,normal_price,reduced_price FROM '.Decka_DB::table('events').' WHERE cancelled=0 AND starts_at IS NOT NULL AND starts_at>%s ORDER BY starts_at,id LIMIT 20',$now),ARRAY_A);
     }
-    // Cashier selections remain protected until the cashier removes or sells them.
-    // The inventory row is still written under the hall lock, so an online order
-    // and a counter sale can never acquire the same seat concurrently.
-    public static function expire():void {}
+    // A live cashier screen refreshes the draft timestamp. Abandoned carts are
+    // released after three minutes, always under the shared hall lock.
+    public static function expire():void {
+        Decka_DB::hall_tx(function(){global $wpdb;$cutoff=gmdate('Y-m-d H:i:s',time()-180);$ids=$wpdb->get_col($wpdb->prepare('SELECT id FROM '.Decka_DB::table('orders').' WHERE mode=%s AND status="cashier_draft" AND created_at<%s FOR UPDATE',Decka_DB::mode(),$cutoff));foreach($ids as $id){Decka_DB::query($wpdb->prepare('DELETE FROM '.Decka_DB::table('inventory').' WHERE order_id=%d AND state="cashier_hold"',$id));Decka_DB::query($wpdb->prepare('DELETE FROM '.Decka_DB::table('items').' WHERE order_id=%d',$id));Decka_DB::update('orders',['status'=>'expired','total'=>0,'last_error'=>'Koszyk kasjera wygasł po 3 minutach bez aktywności.'],['id'=>$id]);Decka_DB::audit('cashier_expired',(int)$id,'Automatycznie zwolniono porzucony koszyk kasjera.');}});
+    }
     private static function draft(int $event):object {
         global $wpdb;$uid=get_current_user_id();$mode=Decka_DB::mode();$o=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('orders').' WHERE mode=%s AND user_id=%d AND status="cashier_draft" AND offer_id IS NULL AND package_ack=%s ORDER BY id DESC LIMIT 1 FOR UPDATE',$mode,$uid,'cashier-event-'.$event));
         if($o)return $o;$user=wp_get_current_user();$id=Decka_DB::insert('orders',['mode'=>$mode,'user_id'=>$uid,'request_key'=>'cashier-'.bin2hex(random_bytes(20)),'email'=>$user->user_email,'first_name'=>$user->display_name,'status'=>'cashier_draft','total'=>0,'discount'=>0,'session_id'=>null,'payment_id'=>null,'package_ack'=>'cashier-event-'.$event,'created_at'=>gmdate('Y-m-d H:i:s')]);return Decka_Service::order($id);
     }
     public static function cart(int $event):array {
         self::require_access();global $wpdb;$o=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('orders').' WHERE mode=%s AND user_id=%d AND status="cashier_draft" AND package_ack=%s ORDER BY id DESC LIMIT 1',Decka_DB::mode(),get_current_user_id(),'cashier-event-'.$event));
-        $items=$o?$wpdb->get_results($wpdb->prepare('SELECT i.*,s.opponent FROM '.Decka_DB::table('items').' i JOIN '.Decka_DB::table('events').' s ON s.id=i.event_id WHERE i.order_id=%d ORDER BY i.id',$o->id),ARRAY_A):[];return ['order_id'=>(int)($o->id??0),'items'=>$items,'total'=>array_sum(array_column($items,'amount'))];
+        if($o)Decka_DB::update('orders',['created_at'=>gmdate('Y-m-d H:i:s')],['id'=>$o->id]);$items=$o?$wpdb->get_results($wpdb->prepare('SELECT i.*,s.opponent FROM '.Decka_DB::table('items').' i JOIN '.Decka_DB::table('events').' s ON s.id=i.event_id WHERE i.order_id=%d ORDER BY i.id',$o->id),ARRAY_A):[];return ['order_id'=>(int)($o->id??0),'items'=>$items,'total'=>array_sum(array_column($items,'amount'))];
     }
     public static function hold(array $p):array {
         self::require_access();$event=absint($p['event_id']??0);$seat=(string)($p['seat_id']??'');$kind=sanitize_key($p['kind']??'normal');if(!$event||!isset(array_column(Decka_DB::seats()['seats'],null,'id')[$seat])||!in_array($kind,['normal','reduced','free'],true))throw new RuntimeException('Nieprawidłowe miejsce lub rodzaj biletu.');
@@ -42,6 +43,6 @@ final class Decka_Cashier {
             foreach($tickets as $row){$busy=$wpdb->get_var($wpdb->prepare('SELECT order_id FROM '.Decka_DB::table('inventory').' WHERE mode=%s AND event_id IN (0,%d) AND seat_id=%s LIMIT 1 FOR UPDATE',Decka_DB::mode(),$row->event_id,$new));if($busy!==null)throw new RuntimeException('Nowe miejsce jest niedostępne na jednym z meczów objętych biletem.');}
             foreach($tickets as $row){$state=$wpdb->get_var($wpdb->prepare('SELECT state FROM '.Decka_DB::table('inventory').' WHERE mode=%s AND event_id=%d AND seat_id=%s AND order_id=%d',Decka_DB::mode(),$row->event_id,$old,$ticket->order_id))?:'paid';Decka_DB::query($wpdb->prepare('DELETE FROM '.Decka_DB::table('inventory').' WHERE mode=%s AND event_id=%d AND seat_id=%s AND order_id=%d',Decka_DB::mode(),$row->event_id,$old,$ticket->order_id));Decka_DB::insert('inventory',['mode'=>Decka_DB::mode(),'event_id'=>$row->event_id,'seat_id'=>$new,'order_id'=>$ticket->order_id,'state'=>$state]);Decka_DB::update('items',['seat_id'=>$new],['order_id'=>$ticket->order_id,'event_id'=>$row->event_id,'seat_id'=>$old]);Decka_DB::update('tickets',['seat_id'=>$new,'nonce'=>bin2hex(random_bytes(24)),'used_at'=>null,'used_by'=>null],['id'=>$row->id]);}
             Decka_DB::update('orders',['mail_sent_at'=>null],['id'=>$ticket->order_id]);Decka_DB::audit('cashier_exchange',(int)$ticket->order_id,wp_json_encode(['event_id'=>$event,'events'=>array_map(fn($row)=>(int)$row->event_id,$tickets),'from'=>$old,'to'=>$new]));return (int)$ticket->order_id;
-        });return ['order_id'=>$order,'message'=>'Miejsce zmienione. Stary kod QR przestał działać, a nowe miejsce zostało zapisane w systemie.'];
+        });try{Decka_Tickets::email($order,'seat_exchange');$message='Miejsce zmienione. Nowy bilet został wysłany e-mailem, a stary kod QR przestał działać.';}catch(Throwable $e){Decka_DB::update('orders',['last_error'=>'Zmiana miejsca zapisana, ale e-mail nie został wysłany: '.$e->getMessage()],['id'=>$order]);$message='Miejsce zmienione, ale wysłanie e-maila nie powiodło się. System ponowi próbę automatycznie.';}return ['order_id'=>$order,'message'=>$message];
     }
 }
