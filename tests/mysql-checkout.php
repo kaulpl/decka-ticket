@@ -67,7 +67,7 @@ $venue=$wpdb->get_row('SHOW COLUMNS FROM '.Decka_DB::table('events')." LIKE 'ven
 decka_check($venue->Default==='Hala ZKiW nr 1, Sambora 5A, Pelplin','migration preserves commas in quoted venue default');
 
 // Full checkout audit: paid settlement, issuance, package, voucher, and atomic failures.
-$settings=Decka_DB::settings();$settings['max_per_fan']=470;update_option('decka_settings',$settings);
+$settings=Decka_DB::settings();$settings['max_per_fan']=472;update_option('decka_settings',$settings);
 function decka_paid_session($id){$o=Decka_Service::order($id);return ['id'=>$o->session_id,'client_reference_id'=>(string)$id,'metadata'=>['decka_order'=>(string)$id],'livemode'=>false,'currency'=>'pln','amount_total'=>(int)$o->total,'payment_status'=>'paid','payment_intent'=>'pi_ci_'.$id];}
 Decka_Service::settle(decka_paid_session($o['order_id']),'test');Decka_Service::settle(decka_paid_session($o['order_id']),'test');
 decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('tickets').' WHERE order_id='.$o['order_id'])===1,'duplicate settlement issues exactly one ticket');

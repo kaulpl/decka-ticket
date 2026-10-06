@@ -6,7 +6,7 @@ Data: 30 września 2026 r. Wydanie do odbioru na środowisku testowym.
 
 ### Dane i logika — 20 zakończonych powodzeniem sprawdzeń
 
-- Plan hali: A 65, B 105, C 130, D 105, E 65, razem 470; identyfikatory unikatowe.
+- Plan hali: A 65, B 106, C 130, D 106, E 65, razem 472; identyfikatory unikatowe.
 - Osiem pól KAMERA poza sprzedażą; zachowane położenie komórek.
 - Podział groszy w mini-karnetach i naliczanie rabatów procentowych/kwotowych.
 - Odrzucanie błędnej wartości rabatu.
@@ -55,7 +55,7 @@ Uruchomiono odizolowany WordPress w WordPress Playground. Używa on warstwy SQLi
 
 - Produkcyjny build Next.js i kontrola TypeScript zakończone powodzeniem.
 - Kontrola składni wszystkich własnych plików PHP zakończona powodzeniem.
-- Automatyczny test przeglądarkowy: wejście w sektory C/B/D i liczby 130/105/105 przycisków, wybór miejsca, cena ulgowa 15 zł, przykład mini-karnetu 65 zł, zerowanie koszyka przy zmianie produktu, zachowanie wyboru na widoku całej hali.
+- Automatyczny test przeglądarkowy: wejście w sektory C/B/D i liczby 130/106/106 przycisków, wybór miejsca, cena ulgowa 15 zł, przykład mini-karnetu 65 zł, zerowanie koszyka przy zmianie produktu, zachowanie wyboru na widoku całej hali.
 - Tryb demonstracyjny nie przyjmuje płatności.
 - Widok mobilny 390 px bez poziomego przewijania całej strony; powiększona mapa ma własne przesuwanie poziome.
 - Brak błędów JavaScript w testach interfejsu i WordPressa.

@@ -8,7 +8,7 @@ async function api(path,body){return page.evaluate(async({path,body})=>{const c=
 async function reload(view='shop'){await page.goto(base+'/wp-admin/admin-post.php?action=decka_app&view='+view);await page.getByRole('heading',{name:view==='shop'?/Twoje miejsce/:/Panel biletera/}).waitFor();if(view==='shop')await page.locator('.product-tile').first().click();}
 async function login(email,password){const r=await page.evaluate(async({email,password})=>{const c=window.DECKA;const r=await fetch(c.api+'login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,auth_nonce:c.authNonce})});const data=await r.json();if(r.ok)window.DECKA=data;return {status:r.status,data};},{email,password});assert.equal(r.status,200,JSON.stringify(r));}
 await reload();
-const cat=await api('catalog');assert.equal(cat.data.seats.seats.length,470);assert.deepEqual(cat.data.seats.sectors.map(s=>s.id),['A','B','C','D','E']);assert.ok(cat.data.events.length>=1);
+const cat=await api('catalog');assert.equal(cat.data.seats.seats.length,472);assert.deepEqual(cat.data.seats.sectors.map(s=>s.id),['A','B','C','D','E']);assert.ok(cat.data.events.length>=1);
 const eid=Number(cat.data.events[0].id);
 const initialAvailability=(await api('availability?events='+eid)).data.seats;
 const shopSeat=cat.data.seats.seats.find(s=>s.sector==='B'&&!initialAvailability.some(i=>i.seat_id===s.id));
