@@ -145,7 +145,7 @@ $packageMail=null;$packageMailFilter=function($pre,$args)use(&$packageMail){$pac
 $items=Decka_DB::table('items');$wpdb->query("ALTER TABLE $items ADD COLUMN unexpected_required int NOT NULL");
 $counts=[];foreach(['orders','items','inventory'] as $t)$counts[$t]=(int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table($t));
 $old=$wpdb->suppress_errors(true);$caught=null;
-try{Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'seats'=>[['id'=>'73','kind'=>'normal']]]);}catch(Decka_DB_Error $e){$caught=$e;}$wpdb->suppress_errors($old);
+try{Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'seats'=>[['id'=>'76','kind'=>'normal']]]);}catch(Decka_DB_Error $e){$caught=$e;}$wpdb->suppress_errors($old);
 decka_check($caught&&$caught->diagnostic['table']==='items','later item write failure has correct diagnosis');
 foreach($counts as $t=>$count)decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table($t))===$count,"item failure rolls back $t");
 $report=Decka_DB::inspect_schema();decka_check(!$report['ok']&&str_contains(implode(' ',$report['issues']),'unexpected_required'),'audit detects foreign required field in any table');$wpdb->query("ALTER TABLE $items DROP COLUMN unexpected_required");
