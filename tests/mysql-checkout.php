@@ -18,7 +18,7 @@ Decka_DB::install();
 $wpdb->flush();$wpdb->col_meta=[];
 $again=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'seats'=>[['id'=>'67','kind'=>'normal']]]);
 decka_check($again['status']==='pending','paid checkout after schema upgrade');decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('orders'))===2,'migration preserves orders');
-decka_check($wpdb->get_row('SHOW COLUMNS FROM '.Decka_DB::table('promos')." LIKE 'sector_ids'")->Default==='[]','schema upgrade gives existing promo codes unrestricted sector scope');
+decka_check($wpdb->get_row('SHOW COLUMNS FROM '.Decka_DB::table('promos')." LIKE 'sector_ids'")->Default===null,'schema upgrade keeps existing promo codes unrestricted with a nullable sector scope');
 
 // Capture an actual failed INSERT, then prove rollback did not erase the diagnosis.
 $wpdb->query('ALTER TABLE '.Decka_DB::table('orders').' ADD COLUMN legacy_required int NOT NULL');
