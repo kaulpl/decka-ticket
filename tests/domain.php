@@ -25,7 +25,9 @@ check(count(array_filter($rows,fn($r)=>$r['starts_at']===null))>0,'brak godziny 
 $oct=array_values(array_filter($rows,fn($r)=>$r['opponent']==='Miasto Szkła Krosno'));
 check($oct[0]['starts_at']==='2026-10-09 16:00:00','Europe/Warsaw poprawnie przeliczona na UTC');
 $seats=json_decode(file_get_contents(__DIR__.'/../plugin/data/seats.json'),true);
-check(count($seats['seats'])===472,'472 miejsc w sektorach A-E');
+check(count($seats['seats'])===540,'540 miejsc w sektorach A-F');
 check(count($seats['cameras'])===8,'8 stanowisk kamer nie jest sprzedawanych');
-check(count(array_unique(array_column($seats['seats'],'id')))===472,'unikatowe identyfikatory miejsc');
+check(count(array_unique(array_column($seats['seats'],'id')))===540,'unikatowe identyfikatory miejsc');
+check(array_column($seats['sectors'],'count','id')['F']===68,'68 miejsc sektora F');
+check(in_array('F47',array_column($seats['seats'],'id'),true),'sektor F zawiera potwierdzone miejsce F47');
 echo "TOTAL $checks checks\n";

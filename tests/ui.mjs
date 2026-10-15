@@ -39,5 +39,5 @@ await page.setViewportSize({width:390,height:844});
 await page.screenshot({path:'../../outputs/decka-bilety/podglad-mobile.png',fullPage:true});
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
 assert.deepEqual(errors,[]);
-console.log('PASS UI: 472 seats in sectors A-E, sector zoom, selection, reduced price, package price, demo guard, mobile overflow, no JS errors');
+console.log('PASS UI: 540 seats in sectors A-F, sector zoom, selection, reduced price, package price, demo guard, mobile overflow, no JS errors');
 await browser.close();

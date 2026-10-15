@@ -42,7 +42,7 @@ $wpdb=new DB;
 $schemas=[
 'events'=>'id INTEGER PRIMARY KEY,opponent TEXT,starts_at TEXT,sale_open INT,cancelled INT DEFAULT 0,gate_open TEXT,gate_close TEXT,venue TEXT,normal_price INT,reduced_price INT,image_id INT',
 'offers'=>'id INTEGER PRIMARY KEY,name TEXT,event_ids TEXT,normal_price INT,reduced_price INT,active INT,starts_at TEXT,ends_at TEXT',
-'promos'=>'id INTEGER PRIMARY KEY,code TEXT,type TEXT,value INT,max_uses INT,event_ids TEXT,active INT,starts_at TEXT,ends_at TEXT',
+'promos'=>'id INTEGER PRIMARY KEY,code TEXT,type TEXT,value INT,max_uses INT,event_ids TEXT,sector_ids TEXT NOT NULL DEFAULT "[]",active INT,starts_at TEXT,ends_at TEXT',
 'orders'=>'id INTEGER PRIMARY KEY AUTOINCREMENT,mode TEXT,user_id INT,request_key TEXT,email TEXT,guest_hash TEXT,first_name TEXT,last_name TEXT,phone TEXT,status TEXT,total INT,discount INT,offer_id INT,promo_id INT,session_id TEXT,payment_id TEXT,checkout_url TEXT,stripe_payload TEXT,package_ack TEXT,created_at TEXT,paid_at TEXT,mail_sent_at TEXT,mail_attempts INT DEFAULT 0,last_error TEXT,UNIQUE(mode,user_id,request_key)',
 'items'=>'id INTEGER PRIMARY KEY AUTOINCREMENT,order_id INT,event_id INT,seat_id TEXT,kind TEXT,amount INT,UNIQUE(order_id,event_id,seat_id)',
 'inventory'=>'mode TEXT,event_id INT,seat_id TEXT,order_id INT,state TEXT,PRIMARY KEY(mode,event_id,seat_id)',
@@ -82,6 +82,12 @@ buy(69,2);rejects(fn()=>buy(69,1,['offer_id'=>1,'package_ack'=>true]),'pakiet od
 check((int)$wpdb->get_var('SELECT COUNT(*) FROM wp_dect_inventory WHERE seat_id="69"')===1,'odrzucony pakiet nie zostawia częściowych blokad');
 Decka_DB::insert('promos',['id'=>1,'code'=>'DECKA10','type'=>'percent','value'=>10,'max_uses'=>1,'event_ids'=>'[]','active'=>1]);
 $discount=buy(70,1,['promo'=>'decka10']);check($discount['total']===2250,'rabat liczony po stronie serwera');
+Decka_DB::insert('promos',['id'=>3,'code'=>'SEKTORB','type'=>'percent','value'=>10,'max_uses'=>0,'event_ids'=>'[]','sector_ids'=>'["B"]','active'=>1]);
+check(Decka_Service::quote(['event_id'=>1,'promo'=>'SEKTORB','seats'=>[['id'=>'71','kind'=>'normal']]])['total']===2250,'kod sektorowy działa w dozwolonym sektorze');
+rejects(fn()=>Decka_Service::quote(['event_id'=>1,'promo'=>'SEKTORB','seats'=>[['id'=>'205','kind'=>'normal']]]),'kod sektorowy odrzucony poza dozwolonym sektorem');
+rejects(fn()=>buy(205,1,['promo'=>'SEKTORB']),'kod sektorowy ponownie sprawdzany przy zakupie');
+Decka_DB::insert('promos',['id'=>4,'code'=>'STARYKOD','type'=>'percent','value'=>10,'max_uses'=>0,'event_ids'=>'[]','active'=>1]);
+check(Decka_Service::quote(['event_id'=>1,'promo'=>'STARYKOD','seats'=>[['id'=>'205','kind'=>'normal']]])['total']===2250,'dotychczasowy kod bez zakresu działa we wszystkich sektorach');
 rejects(fn()=>buy(71,1,['promo'=>'DECKA10']),'limit kodu obejmuje oczekujące płatności');
 $voucher=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>1,'email'=>'voucher@example.test','seats'=>[['id'=>'72','kind'=>'normal']]],true);
 check($voucher['status']==='voucher'&&$voucher['total']===0,'voucher bez obciążenia Stripe');

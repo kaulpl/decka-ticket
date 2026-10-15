@@ -1,6 +1,6 @@
 {
   "source": "Miejsca-Decka-Online.xlsx",
-  "sha256": "9929ab7d8f8ef4a51c76bac4d886f68290618f819705abf7289ea2846af99811",
+  "sha256": "86a4e9d46d32b36295498cdab27a6d2479579a2bd74fcacbe6c9ea52b92f6f0d",
   "sheet": "Arkusz1",
   "seats": [
     {
@@ -4250,6 +4250,618 @@
       "x": 69,
       "y": 13,
       "sourceCell": "BQ13"
+    },
+    {
+      "id": "F16",
+      "number": 16,
+      "sector": "F",
+      "row": 20,
+      "x": 72,
+      "y": 20,
+      "sourceCell": "BT20"
+    },
+    {
+      "id": "F32",
+      "number": 32,
+      "sector": "F",
+      "row": 20,
+      "x": 73,
+      "y": 20,
+      "sourceCell": "BU20"
+    },
+    {
+      "id": "F48",
+      "number": 48,
+      "sector": "F",
+      "row": 20,
+      "x": 74,
+      "y": 20,
+      "sourceCell": "BV20"
+    },
+    {
+      "id": "F68",
+      "number": 68,
+      "sector": "F",
+      "row": 20,
+      "x": 75,
+      "y": 20,
+      "sourceCell": "BW20"
+    },
+    {
+      "id": "F15",
+      "number": 15,
+      "sector": "F",
+      "row": 19,
+      "x": 72,
+      "y": 21,
+      "sourceCell": "BT21"
+    },
+    {
+      "id": "F31",
+      "number": 31,
+      "sector": "F",
+      "row": 19,
+      "x": 73,
+      "y": 21,
+      "sourceCell": "BU21"
+    },
+    {
+      "id": "F47",
+      "number": 47,
+      "sector": "F",
+      "row": 19,
+      "x": 74,
+      "y": 21,
+      "sourceCell": "BV21"
+    },
+    {
+      "id": "F67",
+      "number": 67,
+      "sector": "F",
+      "row": 19,
+      "x": 75,
+      "y": 21,
+      "sourceCell": "BW21"
+    },
+    {
+      "id": "F14",
+      "number": 14,
+      "sector": "F",
+      "row": 18,
+      "x": 72,
+      "y": 22,
+      "sourceCell": "BT22"
+    },
+    {
+      "id": "F30",
+      "number": 30,
+      "sector": "F",
+      "row": 18,
+      "x": 73,
+      "y": 22,
+      "sourceCell": "BU22"
+    },
+    {
+      "id": "F46",
+      "number": 46,
+      "sector": "F",
+      "row": 18,
+      "x": 74,
+      "y": 22,
+      "sourceCell": "BV22"
+    },
+    {
+      "id": "F66",
+      "number": 66,
+      "sector": "F",
+      "row": 18,
+      "x": 75,
+      "y": 22,
+      "sourceCell": "BW22"
+    },
+    {
+      "id": "F13",
+      "number": 13,
+      "sector": "F",
+      "row": 17,
+      "x": 72,
+      "y": 23,
+      "sourceCell": "BT23"
+    },
+    {
+      "id": "F29",
+      "number": 29,
+      "sector": "F",
+      "row": 17,
+      "x": 73,
+      "y": 23,
+      "sourceCell": "BU23"
+    },
+    {
+      "id": "F45",
+      "number": 45,
+      "sector": "F",
+      "row": 17,
+      "x": 74,
+      "y": 23,
+      "sourceCell": "BV23"
+    },
+    {
+      "id": "F65",
+      "number": 65,
+      "sector": "F",
+      "row": 17,
+      "x": 75,
+      "y": 23,
+      "sourceCell": "BW23"
+    },
+    {
+      "id": "F64",
+      "number": 64,
+      "sector": "F",
+      "row": 16,
+      "x": 75,
+      "y": 24,
+      "sourceCell": "BW24"
+    },
+    {
+      "id": "F63",
+      "number": 63,
+      "sector": "F",
+      "row": 15,
+      "x": 75,
+      "y": 25,
+      "sourceCell": "BW25"
+    },
+    {
+      "id": "F12",
+      "number": 12,
+      "sector": "F",
+      "row": 14,
+      "x": 72,
+      "y": 26,
+      "sourceCell": "BT26"
+    },
+    {
+      "id": "F28",
+      "number": 28,
+      "sector": "F",
+      "row": 14,
+      "x": 73,
+      "y": 26,
+      "sourceCell": "BU26"
+    },
+    {
+      "id": "F44",
+      "number": 44,
+      "sector": "F",
+      "row": 14,
+      "x": 74,
+      "y": 26,
+      "sourceCell": "BV26"
+    },
+    {
+      "id": "F62",
+      "number": 62,
+      "sector": "F",
+      "row": 14,
+      "x": 75,
+      "y": 26,
+      "sourceCell": "BW26"
+    },
+    {
+      "id": "F11",
+      "number": 11,
+      "sector": "F",
+      "row": 13,
+      "x": 72,
+      "y": 27,
+      "sourceCell": "BT27"
+    },
+    {
+      "id": "F27",
+      "number": 27,
+      "sector": "F",
+      "row": 13,
+      "x": 73,
+      "y": 27,
+      "sourceCell": "BU27"
+    },
+    {
+      "id": "F43",
+      "number": 43,
+      "sector": "F",
+      "row": 13,
+      "x": 74,
+      "y": 27,
+      "sourceCell": "BV27"
+    },
+    {
+      "id": "F61",
+      "number": 61,
+      "sector": "F",
+      "row": 13,
+      "x": 75,
+      "y": 27,
+      "sourceCell": "BW27"
+    },
+    {
+      "id": "F10",
+      "number": 10,
+      "sector": "F",
+      "row": 12,
+      "x": 72,
+      "y": 28,
+      "sourceCell": "BT28"
+    },
+    {
+      "id": "F26",
+      "number": 26,
+      "sector": "F",
+      "row": 12,
+      "x": 73,
+      "y": 28,
+      "sourceCell": "BU28"
+    },
+    {
+      "id": "F42",
+      "number": 42,
+      "sector": "F",
+      "row": 12,
+      "x": 74,
+      "y": 28,
+      "sourceCell": "BV28"
+    },
+    {
+      "id": "F60",
+      "number": 60,
+      "sector": "F",
+      "row": 12,
+      "x": 75,
+      "y": 28,
+      "sourceCell": "BW28"
+    },
+    {
+      "id": "F09",
+      "number": 9,
+      "sector": "F",
+      "row": 11,
+      "x": 72,
+      "y": 29,
+      "sourceCell": "BT29"
+    },
+    {
+      "id": "F25",
+      "number": 25,
+      "sector": "F",
+      "row": 11,
+      "x": 73,
+      "y": 29,
+      "sourceCell": "BU29"
+    },
+    {
+      "id": "F41",
+      "number": 41,
+      "sector": "F",
+      "row": 11,
+      "x": 74,
+      "y": 29,
+      "sourceCell": "BV29"
+    },
+    {
+      "id": "F59",
+      "number": 59,
+      "sector": "F",
+      "row": 11,
+      "x": 75,
+      "y": 29,
+      "sourceCell": "BW29"
+    },
+    {
+      "id": "F08",
+      "number": 8,
+      "sector": "F",
+      "row": 10,
+      "x": 72,
+      "y": 40,
+      "sourceCell": "BT40"
+    },
+    {
+      "id": "F24",
+      "number": 24,
+      "sector": "F",
+      "row": 10,
+      "x": 73,
+      "y": 40,
+      "sourceCell": "BU40"
+    },
+    {
+      "id": "F40",
+      "number": 40,
+      "sector": "F",
+      "row": 10,
+      "x": 74,
+      "y": 40,
+      "sourceCell": "BV40"
+    },
+    {
+      "id": "F58",
+      "number": 58,
+      "sector": "F",
+      "row": 10,
+      "x": 75,
+      "y": 40,
+      "sourceCell": "BW40"
+    },
+    {
+      "id": "F07",
+      "number": 7,
+      "sector": "F",
+      "row": 9,
+      "x": 72,
+      "y": 41,
+      "sourceCell": "BT41"
+    },
+    {
+      "id": "F23",
+      "number": 23,
+      "sector": "F",
+      "row": 9,
+      "x": 73,
+      "y": 41,
+      "sourceCell": "BU41"
+    },
+    {
+      "id": "F39",
+      "number": 39,
+      "sector": "F",
+      "row": 9,
+      "x": 74,
+      "y": 41,
+      "sourceCell": "BV41"
+    },
+    {
+      "id": "F57",
+      "number": 57,
+      "sector": "F",
+      "row": 9,
+      "x": 75,
+      "y": 41,
+      "sourceCell": "BW41"
+    },
+    {
+      "id": "F06",
+      "number": 6,
+      "sector": "F",
+      "row": 8,
+      "x": 72,
+      "y": 42,
+      "sourceCell": "BT42"
+    },
+    {
+      "id": "F22",
+      "number": 22,
+      "sector": "F",
+      "row": 8,
+      "x": 73,
+      "y": 42,
+      "sourceCell": "BU42"
+    },
+    {
+      "id": "F38",
+      "number": 38,
+      "sector": "F",
+      "row": 8,
+      "x": 74,
+      "y": 42,
+      "sourceCell": "BV42"
+    },
+    {
+      "id": "F56",
+      "number": 56,
+      "sector": "F",
+      "row": 8,
+      "x": 75,
+      "y": 42,
+      "sourceCell": "BW42"
+    },
+    {
+      "id": "F05",
+      "number": 5,
+      "sector": "F",
+      "row": 7,
+      "x": 72,
+      "y": 43,
+      "sourceCell": "BT43"
+    },
+    {
+      "id": "F21",
+      "number": 21,
+      "sector": "F",
+      "row": 7,
+      "x": 73,
+      "y": 43,
+      "sourceCell": "BU43"
+    },
+    {
+      "id": "F37",
+      "number": 37,
+      "sector": "F",
+      "row": 7,
+      "x": 74,
+      "y": 43,
+      "sourceCell": "BV43"
+    },
+    {
+      "id": "F55",
+      "number": 55,
+      "sector": "F",
+      "row": 7,
+      "x": 75,
+      "y": 43,
+      "sourceCell": "BW43"
+    },
+    {
+      "id": "F54",
+      "number": 54,
+      "sector": "F",
+      "row": 6,
+      "x": 75,
+      "y": 44,
+      "sourceCell": "BW44"
+    },
+    {
+      "id": "F53",
+      "number": 53,
+      "sector": "F",
+      "row": 5,
+      "x": 75,
+      "y": 45,
+      "sourceCell": "BW45"
+    },
+    {
+      "id": "F04",
+      "number": 4,
+      "sector": "F",
+      "row": 4,
+      "x": 72,
+      "y": 46,
+      "sourceCell": "BT46"
+    },
+    {
+      "id": "F20",
+      "number": 20,
+      "sector": "F",
+      "row": 4,
+      "x": 73,
+      "y": 46,
+      "sourceCell": "BU46"
+    },
+    {
+      "id": "F36",
+      "number": 36,
+      "sector": "F",
+      "row": 4,
+      "x": 74,
+      "y": 46,
+      "sourceCell": "BV46"
+    },
+    {
+      "id": "F52",
+      "number": 52,
+      "sector": "F",
+      "row": 4,
+      "x": 75,
+      "y": 46,
+      "sourceCell": "BW46"
+    },
+    {
+      "id": "F03",
+      "number": 3,
+      "sector": "F",
+      "row": 3,
+      "x": 72,
+      "y": 47,
+      "sourceCell": "BT47"
+    },
+    {
+      "id": "F19",
+      "number": 19,
+      "sector": "F",
+      "row": 3,
+      "x": 73,
+      "y": 47,
+      "sourceCell": "BU47"
+    },
+    {
+      "id": "F35",
+      "number": 35,
+      "sector": "F",
+      "row": 3,
+      "x": 74,
+      "y": 47,
+      "sourceCell": "BV47"
+    },
+    {
+      "id": "F51",
+      "number": 51,
+      "sector": "F",
+      "row": 3,
+      "x": 75,
+      "y": 47,
+      "sourceCell": "BW47"
+    },
+    {
+      "id": "F02",
+      "number": 2,
+      "sector": "F",
+      "row": 2,
+      "x": 72,
+      "y": 48,
+      "sourceCell": "BT48"
+    },
+    {
+      "id": "F18",
+      "number": 18,
+      "sector": "F",
+      "row": 2,
+      "x": 73,
+      "y": 48,
+      "sourceCell": "BU48"
+    },
+    {
+      "id": "F34",
+      "number": 34,
+      "sector": "F",
+      "row": 2,
+      "x": 74,
+      "y": 48,
+      "sourceCell": "BV48"
+    },
+    {
+      "id": "F50",
+      "number": 50,
+      "sector": "F",
+      "row": 2,
+      "x": 75,
+      "y": 48,
+      "sourceCell": "BW48"
+    },
+    {
+      "id": "F01",
+      "number": 1,
+      "sector": "F",
+      "row": 1,
+      "x": 72,
+      "y": 49,
+      "sourceCell": "BT49"
+    },
+    {
+      "id": "F17",
+      "number": 17,
+      "sector": "F",
+      "row": 1,
+      "x": 73,
+      "y": 49,
+      "sourceCell": "BU49"
+    },
+    {
+      "id": "F33",
+      "number": 33,
+      "sector": "F",
+      "row": 1,
+      "x": 74,
+      "y": 49,
+      "sourceCell": "BV49"
+    },
+    {
+      "id": "F49",
+      "number": 49,
+      "sector": "F",
+      "row": 1,
+      "x": 75,
+      "y": 49,
+      "sourceCell": "BW49"
     }
   ],
   "cameras": [
@@ -4314,6 +4926,10 @@
     {
       "id": "E",
       "count": 65
+    },
+    {
+      "id": "F",
+      "count": 68
     }
   ]
 }
