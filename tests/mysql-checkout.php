@@ -13,11 +13,12 @@ try{$o=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id
 decka_check($o['status']==='pending'&&$o['total']===2500,'strict MySQL paid checkout reaches Stripe');
 decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('inventory'))===1,'one inventory hold');
 // Exercise upgrading an existing database without losing the existing order.
-$wpdb->query('ALTER TABLE '.Decka_DB::table('orders').' DROP COLUMN package_ack');$wpdb->query('ALTER TABLE '.Decka_DB::table('events').' DROP COLUMN normal_price, DROP COLUMN reduced_price, DROP COLUMN image_id');
+$wpdb->query('ALTER TABLE '.Decka_DB::table('orders').' DROP COLUMN package_ack');$wpdb->query('ALTER TABLE '.Decka_DB::table('events').' DROP COLUMN normal_price, DROP COLUMN reduced_price, DROP COLUMN image_id');$wpdb->query('ALTER TABLE '.Decka_DB::table('promos').' DROP COLUMN sector_ids');
 Decka_DB::install();
 $wpdb->flush();$wpdb->col_meta=[];
 $again=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'seats'=>[['id'=>'67','kind'=>'normal']]]);
 decka_check($again['status']==='pending','paid checkout after schema upgrade');decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('orders'))===2,'migration preserves orders');
+decka_check($wpdb->get_row('SHOW COLUMNS FROM '.Decka_DB::table('promos')." LIKE 'sector_ids'")->Default===null,'schema upgrade keeps existing promo codes unrestricted with a nullable sector scope');
 
 // Capture an actual failed INSERT, then prove rollback did not erase the diagnosis.
 $wpdb->query('ALTER TABLE '.Decka_DB::table('orders').' ADD COLUMN legacy_required int NOT NULL');
@@ -67,7 +68,7 @@ $venue=$wpdb->get_row('SHOW COLUMNS FROM '.Decka_DB::table('events')." LIKE 'ven
 decka_check($venue->Default==='Hala ZKiW nr 1, Sambora 5A, Pelplin','migration preserves commas in quoted venue default');
 
 // Full checkout audit: paid settlement, issuance, package, voucher, and atomic failures.
-$settings=Decka_DB::settings();$settings['max_per_fan']=472;update_option('decka_settings',$settings);
+$settings=Decka_DB::settings();$settings['max_per_fan']=count(Decka_DB::seats()['seats']);update_option('decka_settings',$settings);
 function decka_paid_session($id){$o=Decka_Service::order($id);return ['id'=>$o->session_id,'client_reference_id'=>(string)$id,'metadata'=>['decka_order'=>(string)$id],'livemode'=>false,'currency'=>'pln','amount_total'=>(int)$o->total,'payment_status'=>'paid','payment_intent'=>'pi_ci_'.$id];}
 Decka_Service::settle(decka_paid_session($o['order_id']),'test');Decka_Service::settle(decka_paid_session($o['order_id']),'test');
 decka_check((int)$wpdb->get_var('SELECT COUNT(*) FROM '.Decka_DB::table('tickets').' WHERE order_id='.$o['order_id'])===1,'duplicate settlement issues exactly one ticket');

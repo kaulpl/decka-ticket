@@ -61,7 +61,7 @@ Diagnostyka Stripe akceptuje końcowy ukośnik adresu webhooka i przeszukuje kol
 - Zakup gościnny: e-mail, imię, nazwisko, opcjonalny telefon. Konto nie jest tworzone. Zamówienia i pobrania w tej przeglądarce chroni losowy identyfikator w ciasteczku HttpOnly oraz powiązane zabezpieczenie żądań. E-mail sam nie daje dostępu do zamówień. Bilet przychodzi w załączniku po potwierdzonej płatności; bezpłatne bilety i vouchery nie wymagają płatności.
 - Kafle meczów mają ograniczoną szerokość i pokazują całą grafikę w proporcji 1920:1008. PDF dopasowuje wysokość grafiki do proporcji i mieści bilet na jednej stronie A4 (skrajnie wysokie obrazy są proporcjonalnie zmniejszane).
 - Synchronizacja ustawia wejście od 2 godzin przed rozpoczęciem do 2 godzin po rozpoczęciu meczu. Ręcznie zmienione godziny mają pierwszeństwo. Edycja meczu pozwala wrócić do automatycznych godzin. Zmiana terminu nadal zamyka sprzedaż do ponownego otwarcia przez klub.
-- Raporty obejmują normalne, ulgowe, vouchery, bezpłatne, oczekujące, sprzedaż, wejścia i przychody per mecz. Wykresy zapełnienia dotyczą 472 miejsc w sektorach A-E.
+- Raporty obejmują normalne, ulgowe, vouchery, bezpłatne, oczekujące, sprzedaż, wejścia i przychody per mecz. Wykresy zapełnienia dotyczą 540 miejsc w sektorach A-F.
 - Aktualizację można zainstalować przyciskiem przez standardowy, chroniony mechanizm WordPressa. Diagnostyka Stripe odczytuje aktywne środowisko, klucz API i konfigurację webhooka; osobno pokazuje, czy odebrano już poprawnie podpisany webhook. Nie tworzy transakcji i nie zastępuje próby płatności BLIK na hostingu.
 - Apple Wallet i Google Wallet mają osobne przełączniki. Wyłączenie ukrywa konfigurację i wyłącza wydawanie portfeli; zapisane klucze pozostają zachowane.
 - Zespół bileterów: wyszukiwanie po fragmencie imienia/nazwiska/loginu/e-maila, nadawanie oraz usuwanie dostępu bez kasowania konta kibica. Skaner nie ma ręcznego wpisywania kodu; wynik pokazuje przez 2 sekundy, następnie wraca do kamery. Zielony oznacza wejście, żółty wykorzystany bilet, niebieski inny mecz, czerwony pozostałe błędy.
@@ -75,7 +75,7 @@ Diagnostyka Stripe akceptuje końcowy ukośnik adresu webhooka i przeszukuje kol
 
 # Decka Bilety 0.8.0
 
-Wtyczka WordPress z interfejsem Next.js, mapą 472 miejsc w sektorach A-E, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
+Wtyczka WordPress z interfejsem Next.js, mapą 540 miejsc w sektorach A-F, Stripe Checkout i kontrolą wejść. Wydanie do instalacji i odbioru na środowisku testowym. Nie podłączono konta Stripe klubu ani docelowego hostingu.
 
 ## Instalacja
 
@@ -108,8 +108,8 @@ Potwierdzenie na stronie powrotu ze Stripe nie wystarcza do wystawienia biletu. 
 
 ## Mapa miejsc
 
-- Plan hali: **A — 65, B — 106, C — 130, D — 106, E — 65**, razem **472 miejsc**. Centralne sektory B/C/D i kamery zachowują współrzędne z arkusza; skrajne sektory A/E uzupełniają ciągłą numerację planu.
-- Osiem pól „KAMERA” nie jest miejscami sprzedażowymi. Nie dodano sektora A ani brakujących numerów.
+- Plan hali: **A — 65, B — 106, C — 130, D — 106, E — 65, F — 68**, razem **540 miejsc**. Sektor F zachowuje numery i położenie z aktualnego arkusza; potwierdzona korekta komórki `BV21` to `F47`.
+- Osiem pól „KAMERA” nie jest miejscami sprzedażowymi. Brakujące numery w sektorach B-E nie są tworzone jako miejsca sprzedażowe.
 - Położenie i numery pochodzą z komórek Excela, w tym szerszego górnego rzędu. Puste komórki zachowują odstępy.
 - Excel nie zawiera nazw rzędów: przyjęto **rząd 1 najbliżej boiska, rząd 8 najdalej**. Numery miejsc pozostają dokładnie takie jak w pliku.
 - Najpierw widać plan hali z kropkami; kliknięcie sektora otwiera widok z numerami. Na małym telefonie powiększony sektor można przesuwać poziomo.
@@ -142,7 +142,7 @@ Aparat wymaga HTTPS i zezwolenia przeglądarki. Skanowanie wymaga internetu; nie
 
 **Mini-karnet:** podaj nazwę, ID od 2 do 20 wybranych meczów, cenę normalną i ulgową za cały pakiet, opcjonalne daty dostępności i aktywuj ofertę. Przykład: ID trzech kolejnych domowych meczów. To samo miejsce musi być dostępne na każdym z nich. Cały pakiet jest rezerwowany w jednej transakcji. Pakiet ma własny przełącznik sprzedaży; mecze nie muszą być otwarte w sprzedaży pojedynczej. Zmiana zawartości oferty nie zmienia już kupionych biletów.
 
-**Promocja:** kod procentowy lub kwotowy (rabat w zł na całe zamówienie), limit użyć, zakres meczów, daty i włącznik. Limit użyć jest osobny dla TEST/LIVE i uwzględnia oczekujące zamówienia. Kod obejmujący tylko część meczów mini-karnetu jest odrzucany. Rabaty oblicza serwer. Nie łączy się wielu kodów. Przy rabacie 100% bilet jest wystawiany bez Stripe; dodatnia końcowa kwota musi wynosić co najmniej 2 zł.
+**Promocja:** kod procentowy lub kwotowy (rabat w zł na całe zamówienie), limit użyć, zakres meczów i sektorów, daty i włącznik. Brak wybranych sektorów oznacza wszystkie sektory, dzięki czemu dotychczasowe kody zachowują działanie. Limit użyć jest osobny dla TEST/LIVE i uwzględnia oczekujące zamówienia. Kod obejmujący tylko część meczów mini-karnetu albo niedozwolony sektor jest odrzucany. Rabaty oblicza serwer. Nie łączy się wielu kodów. Przy rabacie 100% bilet jest wystawiany bez Stripe; dodatnia końcowa kwota musi wynosić co najmniej 2 zł.
 
 ## Statystyki i obsługa problemów
 
