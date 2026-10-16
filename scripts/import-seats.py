@@ -19,13 +19,18 @@ for row in sheet:
             # while the descending sequence and the user confirm this seat as F47.
             value='F47' if cell.coordinate=='BV21' and source_value=='F44' else source_value
             n=int(value[1:])
-            seat=dict(id=value,number=n,sector='F',row=len(f_rows)-f_rows.index(cell.row),x=cell.column,y=cell.row,sourceCell=cell.coordinate)
+            row_number=min(4,(n-1)//16+1)
+            first=1+(row_number-1)*16
+            position=n-first+1
+            aisle_after=10 if row_number==4 else 8
+            seat=dict(id=value,number=n,sector='F',row=row_number,x=position+(1 if position>aisle_after else 0),y=row_number,sourceCell=cell.coordinate)
             if value!=source_value:seat['sourceValue']=source_value
             seats.append(seat)
 camera=[dict(x=c.column,y=c.row,label='KAMERA') for row in sheet for c in row if c.value=='KAMERA']
 assert len(seats)==540 and len({s['id'] for s in seats})==540
 assert set(int(s['id']) for s in seats if s['sector']!='F')==set(range(1,481))-{261,262,277,278,279,295,296,297}
 assert {s['id'] for s in seats if s['sector']=='F'}=={f'F{n:02d}' for n in range(1,69)}
+assert all(next(s for s in seats if s['id']==f'F{n:02d}')['row']==row for row,span in enumerate((range(1,17),range(17,33),range(33,49),range(49,69)),1) for n in span)
 data=dict(source=source.name,sha256=hashlib.sha256(source.read_bytes()).hexdigest(),sheet=sheet.title,seats=seats,cameras=camera,sectors=[dict(id=k,count=sum(s['sector']==k for s in seats)) for k in 'ABCDEF'])
 for dest in [root/'plugin/data/seats.json',root/'frontend/public/seats.json']:
     dest.write_text(json.dumps(data,ensure_ascii=False,indent=2))
