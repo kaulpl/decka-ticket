@@ -4256,7 +4256,7 @@
       "number": 16,
       "sector": "F",
       "row": 1,
-      "x": 18,
+      "x": 22,
       "y": 1,
       "sourceCell": "BT20"
     },
@@ -4292,7 +4292,7 @@
       "number": 15,
       "sector": "F",
       "row": 1,
-      "x": 17,
+      "x": 21,
       "y": 1,
       "sourceCell": "BT21"
     },
@@ -4328,7 +4328,7 @@
       "number": 14,
       "sector": "F",
       "row": 1,
-      "x": 16,
+      "x": 20,
       "y": 1,
       "sourceCell": "BT22"
     },
@@ -4364,7 +4364,7 @@
       "number": 13,
       "sector": "F",
       "row": 1,
-      "x": 15,
+      "x": 19,
       "y": 1,
       "sourceCell": "BT23"
     },
@@ -4418,7 +4418,7 @@
       "number": 12,
       "sector": "F",
       "row": 1,
-      "x": 12,
+      "x": 16,
       "y": 1,
       "sourceCell": "BT26"
     },
@@ -4454,7 +4454,7 @@
       "number": 11,
       "sector": "F",
       "row": 1,
-      "x": 11,
+      "x": 15,
       "y": 1,
       "sourceCell": "BT27"
     },
@@ -4490,7 +4490,7 @@
       "number": 10,
       "sector": "F",
       "row": 1,
-      "x": 10,
+      "x": 14,
       "y": 1,
       "sourceCell": "BT28"
     },
@@ -4526,7 +4526,7 @@
       "number": 9,
       "sector": "F",
       "row": 1,
-      "x": 9,
+      "x": 13,
       "y": 1,
       "sourceCell": "BT29"
     },
@@ -4562,7 +4562,7 @@
       "number": 8,
       "sector": "F",
       "row": 1,
-      "x": 8,
+      "x": 10,
       "y": 1,
       "sourceCell": "BT40"
     },
@@ -4598,7 +4598,7 @@
       "number": 7,
       "sector": "F",
       "row": 1,
-      "x": 7,
+      "x": 9,
       "y": 1,
       "sourceCell": "BT41"
     },
@@ -4634,7 +4634,7 @@
       "number": 6,
       "sector": "F",
       "row": 1,
-      "x": 6,
+      "x": 8,
       "y": 1,
       "sourceCell": "BT42"
     },
@@ -4670,7 +4670,7 @@
       "number": 5,
       "sector": "F",
       "row": 1,
-      "x": 5,
+      "x": 7,
       "y": 1,
       "sourceCell": "BT43"
     },

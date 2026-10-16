@@ -22,7 +22,7 @@ for row in sheet:
             row_number=min(4,(n-1)//16+1)
             first=1+(row_number-1)*16
             position=n-first+1
-            aisle_offset=2 if row_number<4 and position>12 else 0
+            aisle_offset=(2 if row_number<4 and position>12 else 0)+(2 if row_number==1 and position>4 else 0)+(2 if row_number==1 and position>8 else 0)
             seat=dict(id=value,number=n,sector='F',row=row_number,x=position+aisle_offset,y=row_number,sourceCell=cell.coordinate)
             if value!=source_value:seat['sourceValue']=source_value
             seats.append(seat)
