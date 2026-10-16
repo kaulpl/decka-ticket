@@ -4265,7 +4265,7 @@
       "number": 32,
       "sector": "F",
       "row": 2,
-      "x": 18,
+      "x": 22,
       "y": 2,
       "sourceCell": "BU20"
     },
@@ -4274,7 +4274,7 @@
       "number": 48,
       "sector": "F",
       "row": 3,
-      "x": 18,
+      "x": 22,
       "y": 3,
       "sourceCell": "BV20"
     },
@@ -4283,7 +4283,7 @@
       "number": 68,
       "sector": "F",
       "row": 4,
-      "x": 20,
+      "x": 28,
       "y": 4,
       "sourceCell": "BW20"
     },
@@ -4301,7 +4301,7 @@
       "number": 31,
       "sector": "F",
       "row": 2,
-      "x": 17,
+      "x": 21,
       "y": 2,
       "sourceCell": "BU21"
     },
@@ -4310,7 +4310,7 @@
       "number": 47,
       "sector": "F",
       "row": 3,
-      "x": 17,
+      "x": 21,
       "y": 3,
       "sourceCell": "BV21"
     },
@@ -4319,7 +4319,7 @@
       "number": 67,
       "sector": "F",
       "row": 4,
-      "x": 19,
+      "x": 27,
       "y": 4,
       "sourceCell": "BW21"
     },
@@ -4337,7 +4337,7 @@
       "number": 30,
       "sector": "F",
       "row": 2,
-      "x": 16,
+      "x": 20,
       "y": 2,
       "sourceCell": "BU22"
     },
@@ -4346,7 +4346,7 @@
       "number": 46,
       "sector": "F",
       "row": 3,
-      "x": 16,
+      "x": 20,
       "y": 3,
       "sourceCell": "BV22"
     },
@@ -4355,7 +4355,7 @@
       "number": 66,
       "sector": "F",
       "row": 4,
-      "x": 18,
+      "x": 26,
       "y": 4,
       "sourceCell": "BW22"
     },
@@ -4373,7 +4373,7 @@
       "number": 29,
       "sector": "F",
       "row": 2,
-      "x": 15,
+      "x": 19,
       "y": 2,
       "sourceCell": "BU23"
     },
@@ -4382,7 +4382,7 @@
       "number": 45,
       "sector": "F",
       "row": 3,
-      "x": 15,
+      "x": 19,
       "y": 3,
       "sourceCell": "BV23"
     },
@@ -4391,7 +4391,7 @@
       "number": 65,
       "sector": "F",
       "row": 4,
-      "x": 17,
+      "x": 25,
       "y": 4,
       "sourceCell": "BW23"
     },
@@ -4400,7 +4400,7 @@
       "number": 64,
       "sector": "F",
       "row": 4,
-      "x": 16,
+      "x": 22,
       "y": 4,
       "sourceCell": "BW24"
     },
@@ -4409,7 +4409,7 @@
       "number": 63,
       "sector": "F",
       "row": 4,
-      "x": 15,
+      "x": 21,
       "y": 4,
       "sourceCell": "BW25"
     },
@@ -4427,7 +4427,7 @@
       "number": 28,
       "sector": "F",
       "row": 2,
-      "x": 12,
+      "x": 16,
       "y": 2,
       "sourceCell": "BU26"
     },
@@ -4436,7 +4436,7 @@
       "number": 44,
       "sector": "F",
       "row": 3,
-      "x": 12,
+      "x": 16,
       "y": 3,
       "sourceCell": "BV26"
     },
@@ -4445,7 +4445,7 @@
       "number": 62,
       "sector": "F",
       "row": 4,
-      "x": 14,
+      "x": 20,
       "y": 4,
       "sourceCell": "BW26"
     },
@@ -4463,7 +4463,7 @@
       "number": 27,
       "sector": "F",
       "row": 2,
-      "x": 11,
+      "x": 15,
       "y": 2,
       "sourceCell": "BU27"
     },
@@ -4472,7 +4472,7 @@
       "number": 43,
       "sector": "F",
       "row": 3,
-      "x": 11,
+      "x": 15,
       "y": 3,
       "sourceCell": "BV27"
     },
@@ -4481,7 +4481,7 @@
       "number": 61,
       "sector": "F",
       "row": 4,
-      "x": 13,
+      "x": 19,
       "y": 4,
       "sourceCell": "BW27"
     },
@@ -4499,7 +4499,7 @@
       "number": 26,
       "sector": "F",
       "row": 2,
-      "x": 10,
+      "x": 14,
       "y": 2,
       "sourceCell": "BU28"
     },
@@ -4508,7 +4508,7 @@
       "number": 42,
       "sector": "F",
       "row": 3,
-      "x": 10,
+      "x": 14,
       "y": 3,
       "sourceCell": "BV28"
     },
@@ -4517,7 +4517,7 @@
       "number": 60,
       "sector": "F",
       "row": 4,
-      "x": 12,
+      "x": 16,
       "y": 4,
       "sourceCell": "BW28"
     },
@@ -4535,7 +4535,7 @@
       "number": 25,
       "sector": "F",
       "row": 2,
-      "x": 9,
+      "x": 13,
       "y": 2,
       "sourceCell": "BU29"
     },
@@ -4544,7 +4544,7 @@
       "number": 41,
       "sector": "F",
       "row": 3,
-      "x": 9,
+      "x": 13,
       "y": 3,
       "sourceCell": "BV29"
     },
@@ -4553,7 +4553,7 @@
       "number": 59,
       "sector": "F",
       "row": 4,
-      "x": 11,
+      "x": 15,
       "y": 4,
       "sourceCell": "BW29"
     },
@@ -4571,7 +4571,7 @@
       "number": 24,
       "sector": "F",
       "row": 2,
-      "x": 8,
+      "x": 10,
       "y": 2,
       "sourceCell": "BU40"
     },
@@ -4580,7 +4580,7 @@
       "number": 40,
       "sector": "F",
       "row": 3,
-      "x": 8,
+      "x": 10,
       "y": 3,
       "sourceCell": "BV40"
     },
@@ -4589,7 +4589,7 @@
       "number": 58,
       "sector": "F",
       "row": 4,
-      "x": 10,
+      "x": 14,
       "y": 4,
       "sourceCell": "BW40"
     },
@@ -4607,7 +4607,7 @@
       "number": 23,
       "sector": "F",
       "row": 2,
-      "x": 7,
+      "x": 9,
       "y": 2,
       "sourceCell": "BU41"
     },
@@ -4616,7 +4616,7 @@
       "number": 39,
       "sector": "F",
       "row": 3,
-      "x": 7,
+      "x": 9,
       "y": 3,
       "sourceCell": "BV41"
     },
@@ -4625,7 +4625,7 @@
       "number": 57,
       "sector": "F",
       "row": 4,
-      "x": 9,
+      "x": 13,
       "y": 4,
       "sourceCell": "BW41"
     },
@@ -4643,7 +4643,7 @@
       "number": 22,
       "sector": "F",
       "row": 2,
-      "x": 6,
+      "x": 8,
       "y": 2,
       "sourceCell": "BU42"
     },
@@ -4652,7 +4652,7 @@
       "number": 38,
       "sector": "F",
       "row": 3,
-      "x": 6,
+      "x": 8,
       "y": 3,
       "sourceCell": "BV42"
     },
@@ -4661,7 +4661,7 @@
       "number": 56,
       "sector": "F",
       "row": 4,
-      "x": 8,
+      "x": 10,
       "y": 4,
       "sourceCell": "BW42"
     },
@@ -4679,7 +4679,7 @@
       "number": 21,
       "sector": "F",
       "row": 2,
-      "x": 5,
+      "x": 7,
       "y": 2,
       "sourceCell": "BU43"
     },
@@ -4688,7 +4688,7 @@
       "number": 37,
       "sector": "F",
       "row": 3,
-      "x": 5,
+      "x": 7,
       "y": 3,
       "sourceCell": "BV43"
     },
@@ -4697,7 +4697,7 @@
       "number": 55,
       "sector": "F",
       "row": 4,
-      "x": 7,
+      "x": 9,
       "y": 4,
       "sourceCell": "BW43"
     },
@@ -4706,7 +4706,7 @@
       "number": 54,
       "sector": "F",
       "row": 4,
-      "x": 6,
+      "x": 8,
       "y": 4,
       "sourceCell": "BW44"
     },
@@ -4715,7 +4715,7 @@
       "number": 53,
       "sector": "F",
       "row": 4,
-      "x": 5,
+      "x": 7,
       "y": 4,
       "sourceCell": "BW45"
     },
