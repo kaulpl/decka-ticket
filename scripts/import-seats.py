@@ -22,9 +22,9 @@ for row in sheet:
             row_number=min(4,(n-1)//16+1)
             first=1+(row_number-1)*16
             position=n-first+1
-            # Każda czwórka krzeseł jest oddzielona odstępem o szerokości
-            # dwóch miejsc. Środkowy odstęp jest w UI opisany jako obszar za koszem.
-            aisle_offset=2*((position-1)//4)
+            # Rzędy 1-3 mają przerwy po każdej czwórce. W dłuższym rzędzie 4
+            # występuje tylko przerwa za koszem, pomiędzy miejscami 59 i 58.
+            aisle_offset=2*((position-1)//4) if row_number<4 else (2 if position>10 else 0)
             seat=dict(id=value,number=n,sector='F',row=row_number,x=position+aisle_offset,y=row_number,sourceCell=cell.coordinate)
             if value!=source_value:seat['sourceValue']=source_value
             seats.append(seat)
