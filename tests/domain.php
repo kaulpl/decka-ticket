@@ -35,5 +35,6 @@ check($by_id['F01']['row']===1&&$by_id['F16']['row']===1,'F01-F16 tworzą rząd 
 check($by_id['F17']['row']===2&&$by_id['F32']['row']===2,'F17-F32 tworzą rząd 2');
 check($by_id['F33']['row']===3&&$by_id['F48']['row']===3,'F33-F48 tworzą rząd 3');
 check($by_id['F49']['row']===4&&$by_id['F68']['row']===4,'F49-F68 tworzą rząd 4');
-check($by_id['F09']['x']-$by_id['F08']['x']===2&&$by_id['F25']['x']-$by_id['F24']['x']===2,'przejście w sektorze F ma szerokość miejsca');
+check($by_id['F13']['x']-$by_id['F12']['x']===3&&$by_id['F29']['x']-$by_id['F28']['x']===3&&$by_id['F45']['x']-$by_id['F44']['x']===3,'dwa miejsca przerwy między 12/13 w rzędach 1-3 sektora F');
+check($by_id['F61']['x']-$by_id['F60']['x']===1,'rząd 4 sektora F nie ma przerwy');
 echo "TOTAL $checks checks\n";
