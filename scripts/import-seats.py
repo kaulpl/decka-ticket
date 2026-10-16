@@ -22,8 +22,8 @@ for row in sheet:
             row_number=min(4,(n-1)//16+1)
             first=1+(row_number-1)*16
             position=n-first+1
-            aisle_after=10 if row_number==4 else 8
-            seat=dict(id=value,number=n,sector='F',row=row_number,x=position+(1 if position>aisle_after else 0),y=row_number,sourceCell=cell.coordinate)
+            aisle_offset=2 if row_number<4 and position>12 else 0
+            seat=dict(id=value,number=n,sector='F',row=row_number,x=position+aisle_offset,y=row_number,sourceCell=cell.coordinate)
             if value!=source_value:seat['sourceValue']=source_value
             seats.append(seat)
 camera=[dict(x=c.column,y=c.row,label='KAMERA') for row in sheet for c in row if c.value=='KAMERA']
