@@ -108,7 +108,7 @@ Potwierdzenie na stronie powrotu ze Stripe nie wystarcza do wystawienia biletu. 
 
 ## Mapa miejsc
 
-- Plan hali: **A — 65, B — 106, C — 130, D — 106, E — 65, F — 68**, razem **540 miejsc**. Sektor F zachowuje numery i położenie z aktualnego arkusza; potwierdzona korekta komórki `BV21` to `F47`. W szczegółowym widoku F boisko jest po lewej, rzędy obejmują odpowiednio miejsca 1–16, 17–32, 33–48 i 49–68. Dwumiejscowe przerwy powtarzają się po każdej grupie czterech krzeseł we wszystkich rzędach, a wspólny pas między środkowymi grupami, rozciągnięty przez cztery rzędy, jest opisany „Obszar za koszem”. Wszystkie miejsca są pokazywane jako jednakowe koła.
+- Plan hali: **A — 65, B — 106, C — 130, D — 106, E — 65, F — 68**, razem **540 miejsc**. Sektor F zachowuje numery i położenie z aktualnego arkusza; potwierdzona korekta komórki `BV21` to `F47`. W szczegółowym widoku F boisko jest po lewej, rzędy obejmują odpowiednio miejsca 1–16, 17–32, 33–48 i 49–68. Rzędy 1–3 mają dwumiejscowe przerwy po każdej grupie czterech krzeseł. Pas „Obszar za koszem” przebiega pod miejscami 9/25/41 przez pierwsze trzy rzędy, natomiast w rzędzie 4 oddziela miejsca 59 i 58. Pozostała część rzędu 4 jest ciągła. Wszystkie miejsca są pokazywane jako jednakowe koła.
 - Osiem pól „KAMERA” nie jest miejscami sprzedażowymi. Brakujące numery w sektorach B-E nie są tworzone jako miejsca sprzedażowe.
 - Położenie i numery pochodzą z komórek Excela, w tym szerszego górnego rzędu. Puste komórki zachowują odstępy.
 - Excel nie zawiera nazw rzędów: przyjęto **rząd 1 najbliżej boiska, rząd 8 najdalej**. Numery miejsc pozostają dokładnie takie jak w pliku.

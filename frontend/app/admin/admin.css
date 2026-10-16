@@ -21,4 +21,4 @@
 /* Miejsca w panelu mają stały rozmiar i zwarty rozstaw niezależny od szerokości ekranu. */
 .da-map-detail{overflow:auto}.da-map-detail svg{display:block;width:auto;max-width:none;aspect-ratio:auto}.da-sector-f-layout{width:max-content;max-width:100%;margin-inline:auto}.da-sector-f-row>button{width:28px;height:28px;font-size:9px}.da-sector-f-row>.f-seat-after-aisle{margin-top:56px}
 @media(max-width:640px){.da-sector-f-row>button{width:28px;height:28px;font-size:9px}.da-sector-f-row>.f-seat-after-aisle{margin-top:56px}}
-.da-sector-f-rows{position:relative}.da-sector-f-row>button{border-radius:50%}.da-sector-f-row>.f-seat-after-basket{margin-top:56px}.da-sector-f-rows>.f-basket-area{left:0;right:0;top:358px;width:auto;height:56px;font-size:10px;writing-mode:horizontal-tb;transform:none}
+.da-sector-f-rows{position:relative;--f-column-gap:clamp(8px,1.5vw,20px)}.da-sector-f-row>button{border-radius:50%}.da-sector-f-row>.f-seat-after-basket{margin-top:56px}.da-sector-f-rows>.f-basket-area{left:0;right:calc(25% + var(--f-column-gap)/4);top:358px;width:auto;height:56px;font-size:10px;writing-mode:horizontal-tb;transform:none}

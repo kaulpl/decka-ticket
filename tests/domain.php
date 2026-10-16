@@ -35,6 +35,7 @@ check($by_id['F01']['row']===1&&$by_id['F16']['row']===1,'F01-F16 tworzą rząd 
 check($by_id['F17']['row']===2&&$by_id['F32']['row']===2,'F17-F32 tworzą rząd 2');
 check($by_id['F33']['row']===3&&$by_id['F48']['row']===3,'F33-F48 tworzą rząd 3');
 check($by_id['F49']['row']===4&&$by_id['F68']['row']===4,'F49-F68 tworzą rząd 4');
-$f_gap_pairs=[[4,5],[8,9],[12,13],[20,21],[24,25],[28,29],[36,37],[40,41],[44,45],[52,53],[56,57],[60,61],[64,65]];
-check(array_reduce($f_gap_pairs,fn($ok,$pair)=>$ok&&$by_id[sprintf('F%02d',$pair[1])]['x']-$by_id[sprintf('F%02d',$pair[0])]['x']===3,true),'dwumiejscowe przerwy powtarzają się co cztery miejsca we wszystkich rzędach sektora F');
+$f_gap_pairs=[[4,5],[8,9],[12,13],[20,21],[24,25],[28,29],[36,37],[40,41],[44,45],[58,59]];
+check(array_reduce($f_gap_pairs,fn($ok,$pair)=>$ok&&$by_id[sprintf('F%02d',$pair[1])]['x']-$by_id[sprintf('F%02d',$pair[0])]['x']===3,true),'przerwy sektora F odpowiadają zatwierdzonemu układowi referencyjnemu');
+check($by_id['F53']['x']-$by_id['F52']['x']===1&&$by_id['F57']['x']-$by_id['F56']['x']===1&&$by_id['F61']['x']-$by_id['F60']['x']===1&&$by_id['F65']['x']-$by_id['F64']['x']===1,'rząd 4 pozostaje ciągły poza obszarem między F58/F59');
 echo "TOTAL $checks checks\n";
