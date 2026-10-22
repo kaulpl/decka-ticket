@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Decka Bilety
  * Description: Numerowane miejsca, Stripe, bilety PDF i kontrola wejścia Decki Pelplin.
- * Version: 1.4.0
+ * Version: 1.5.0
  * Update URI: https://github.com/kaulpl/decka-ticket
  * Requires at least: 6.6
  * Requires PHP: 8.2
@@ -11,9 +11,9 @@
 defined('ABSPATH') || exit;
 define('DECKA_DIR', plugin_dir_path(__FILE__));
 define('DECKA_URL', plugin_dir_url(__FILE__));
-define('DECKA_VERSION', '1.4.0');
+define('DECKA_VERSION', '1.5.0');
 define('DECKA_FILE', __FILE__);
-foreach (['domain','db','stripe','payu','mail','profile','service','cashier','guest','tickets','league','api','identity','wallet','updater','admin-api','admin'] as $part) require_once DECKA_DIR."includes/$part.php";
+foreach (['domain','db','stripe','mail','profile','service','cashier','guest','tickets','payu','league','api','identity','wallet','updater','admin-api','xlsx','admin'] as $part) require_once DECKA_DIR."includes/$part.php";
 Decka_Updater::init();
 register_activation_hook(__FILE__, ['Decka_DB','install']);
 register_deactivation_hook(__FILE__, function(){ wp_clear_scheduled_hook('decka_maintenance');wp_clear_scheduled_hook('decka_expire_due'); });
@@ -21,6 +21,7 @@ add_action('rest_api_init', ['Decka_API','register']);
 add_action('admin_menu', ['Decka_Admin','menu']);
 add_action('rest_api_init', ['Decka_Admin_API','register']);
 add_action('admin_post_decka_stats', ['Decka_Admin','export']);
+add_action('admin_post_decka_accounting_xlsx', ['Decka_Admin','accounting_xlsx']);
 add_action('decka_maintenance', ['Decka_Service','maintenance']);
 add_action('decka_expire_due', ['Decka_Service','expire_due']);
 add_filter('cron_schedules',function($s){$s['decka_minute']=['interval'=>60,'display'=>'Decka co minutę'];return $s;});

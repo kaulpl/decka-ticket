@@ -7,7 +7,7 @@ function decka_check($ok,$label){global $wpdb;if(!$ok)throw new RuntimeException
 $wpdb->query("SET SESSION sql_mode='STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION'");
 $settings=Decka_DB::settings();$settings['test_secret']=Decka_Stripe::encrypt('sk_test_ci_placeholder');$settings['test_webhook']=Decka_Stripe::encrypt('whsec_ci_placeholder');update_option('decka_settings',$settings);
 add_filter('pre_http_request',function($pre,$args,$url){if(str_starts_with($url,'https://api.stripe.com/')){if($url!=='https://api.stripe.com/v1/checkout/sessions')throw new RuntimeException('Unexpected Stripe request');parse_str($args['body'],$body);return ['response'=>['code'=>200],'headers'=>[],'body'=>wp_json_encode(['id'=>'cs_test_'.$body['client_reference_id'],'url'=>'https://checkout.stripe.com/test','metadata'=>$body['metadata']]),'cookies'=>[]];}return $pre;},10,3);
-$uid=wp_insert_user(['user_login'=>'ci_fan','user_email'=>'ci@example.test','user_pass'=>wp_generate_password(),'role'=>'subscriber']);decka_check(!is_wp_error($uid),'fan created');wp_set_current_user($uid);
+$uid=wp_insert_user(['user_login'=>'ci_fan','user_email'=>'ci@example.test','user_pass'=>wp_generate_password(),'role'=>'subscriber']);decka_check(!is_wp_error($uid),'fan created');wp_set_current_user($uid);Decka_Profile::save($uid,['first_name'=>'Jan','last_name'=>'Testowy','street'=>'Sambora','house_number'=>'5A','apartment'=>'','postcode'=>'83-130','city'=>'Pelplin','phone'=>'+48 500 600 700']);
 $event=Decka_DB::insert('events',['opponent'=>'CI match','starts_at'=>gmdate('Y-m-d H:i:s',time()+86400),'sale_open'=>1,'updated_at'=>gmdate('Y-m-d H:i:s')]);
 try{$o=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>$event,'seats'=>[['id'=>'66','kind'=>'normal']]]);}catch(Throwable $e){throw new RuntimeException($e->getMessage().' | '.$wpdb->last_error,0,$e);}
 decka_check($o['status']==='pending'&&$o['total']===2500,'strict MySQL paid checkout reaches Stripe');
@@ -231,7 +231,7 @@ $newUid=Decka_Identity::resolve($google);decka_check(Decka_Profile::required($ne
 Decka_Profile::save($newUid,$profile);decka_check(!Decka_Profile::required($newUid)&&Decka_Profile::read($newUid)['city']==='Pelplin','profile persists and completion flag clears');
 decka_check(Decka_Identity::resolve($google)===$newUid,'linked Google account signs into same user');
 $existing=wp_insert_user(['user_login'=>'ci_google_existing','user_email'=>'existing-ci@gmail.com','user_pass'=>wp_generate_password(),'role'=>'subscriber']);
-$google['sub']='ci-google-existing';$google['email']='existing-ci@gmail.com';decka_check(Decka_Identity::resolve($google)===$existing,'authoritative Google email reuses existing account without password');
+$google['sub']='ci-google-existing';$google['email']='existing-ci@gmail.com';decka_check(Decka_Identity::resolve($google)===$existing,'authoritative Google email reuses existing account without password');decka_check(Decka_Profile::required($existing),'existing Google account without complete contact data is stopped before checkout');
 $failed=false;try{Decka_Identity::resolve($google,$newUid);}catch(RuntimeException $e){$failed=true;}decka_check($failed,'Google identity cannot be attached to another user');
 decka_check(!Decka_Identity::authoritative(['email'=>'thirdparty@example.test','email_verified'=>true]),'third-party email needs separate ownership confirmation');
 decka_check(Decka_Identity::authoritative(['email'=>'fan@workspace.test','email_verified'=>true,'hd'=>'workspace.test']),'Workspace verified email is authoritative');
@@ -267,6 +267,7 @@ $updaterCache=(new ReflectionClass(Decka_Updater::class))->getConstant('CACHE');
 set_site_transient($updaterCache,['status'=>'available','version'=>'99.0.0']);$url=Decka_Updater::status()['install_url'];parse_str(wp_parse_url($url,PHP_URL_QUERY),$query);
 decka_check(($query['action']??'')==='upgrade-plugin'&&($query['plugin']??'')===plugin_basename(DECKA_FILE)&&wp_verify_nonce($query['_wpnonce']??'','upgrade-plugin_'.plugin_basename(DECKA_FILE)),'native WordPress installation URL preserves plugin and valid nonce');delete_site_transient($updaterCache);
 // Real encrypted settings, REST signature verification and strict database with fake PayU HTTP.
+Decka_Profile::save(get_current_user_id(),['first_name'=>'Admin','last_name'=>'Decka','street'=>'Sambora','house_number'=>'5A','apartment'=>'','postcode'=>'83-130','city'=>'Pelplin','phone'=>'+48 500 600 701']);
 $settings=Decka_DB::settings();$settings['payment_provider']='payu';$settings['mode']='test';$settings['purchase_interval']=0;
 foreach(['pos_id'=>'123','client_id'=>'456','client_secret'=>'payu-ci-secret','second_key'=>'payu-ci-second'] as $k=>$v)$settings['payu_test_'.$k]=in_array($k,['client_secret','second_key'])?Decka_Stripe::encrypt($v):$v;
 update_option('decka_settings',$settings);$safe=Decka_Admin_API::settings();decka_check(!str_contains(wp_json_encode($safe),'payu-ci-secret')&&!str_contains(wp_json_encode($safe),'payu-ci-second'),'PayU secrets never exposed in admin bootstrap');
