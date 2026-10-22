@@ -267,6 +267,7 @@ $updaterCache=(new ReflectionClass(Decka_Updater::class))->getConstant('CACHE');
 set_site_transient($updaterCache,['status'=>'available','version'=>'99.0.0']);$url=Decka_Updater::status()['install_url'];parse_str(wp_parse_url($url,PHP_URL_QUERY),$query);
 decka_check(($query['action']??'')==='upgrade-plugin'&&($query['plugin']??'')===plugin_basename(DECKA_FILE)&&wp_verify_nonce($query['_wpnonce']??'','upgrade-plugin_'.plugin_basename(DECKA_FILE)),'native WordPress installation URL preserves plugin and valid nonce');delete_site_transient($updaterCache);
 // Real encrypted settings, REST signature verification and strict database with fake PayU HTTP.
+Decka_Profile::save(get_current_user_id(),['first_name'=>'Admin','last_name'=>'Decka','street'=>'Sambora','house_number'=>'5A','apartment'=>'','postcode'=>'83-130','city'=>'Pelplin','phone'=>'+48 500 600 701']);
 $settings=Decka_DB::settings();$settings['payment_provider']='payu';$settings['mode']='test';$settings['purchase_interval']=0;
 foreach(['pos_id'=>'123','client_id'=>'456','client_secret'=>'payu-ci-secret','second_key'=>'payu-ci-second'] as $k=>$v)$settings['payu_test_'.$k]=in_array($k,['client_secret','second_key'])?Decka_Stripe::encrypt($v):$v;
 update_option('decka_settings',$settings);$safe=Decka_Admin_API::settings();decka_check(!str_contains(wp_json_encode($safe),'payu-ci-secret')&&!str_contains(wp_json_encode($safe),'payu-ci-second'),'PayU secrets never exposed in admin bootstrap');
