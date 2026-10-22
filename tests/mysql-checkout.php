@@ -231,7 +231,7 @@ $newUid=Decka_Identity::resolve($google);decka_check(Decka_Profile::required($ne
 Decka_Profile::save($newUid,$profile);decka_check(!Decka_Profile::required($newUid)&&Decka_Profile::read($newUid)['city']==='Pelplin','profile persists and completion flag clears');
 decka_check(Decka_Identity::resolve($google)===$newUid,'linked Google account signs into same user');
 $existing=wp_insert_user(['user_login'=>'ci_google_existing','user_email'=>'existing-ci@gmail.com','user_pass'=>wp_generate_password(),'role'=>'subscriber']);
-$google['sub']='ci-google-existing';$google['email']='existing-ci@gmail.com';decka_check(Decka_Identity::resolve($google)===$existing,'authoritative Google email reuses existing account without password');
+$google['sub']='ci-google-existing';$google['email']='existing-ci@gmail.com';decka_check(Decka_Identity::resolve($google)===$existing,'authoritative Google email reuses existing account without password');decka_check(Decka_Profile::required($existing),'existing Google account without complete contact data is stopped before checkout');
 $failed=false;try{Decka_Identity::resolve($google,$newUid);}catch(RuntimeException $e){$failed=true;}decka_check($failed,'Google identity cannot be attached to another user');
 decka_check(!Decka_Identity::authoritative(['email'=>'thirdparty@example.test','email_verified'=>true]),'third-party email needs separate ownership confirmation');
 decka_check(Decka_Identity::authoritative(['email'=>'fan@workspace.test','email_verified'=>true,'hd'=>'workspace.test']),'Workspace verified email is authoritative');

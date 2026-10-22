@@ -15,7 +15,7 @@ final class Decka_Service {
         if($uid&&!$voucher&&class_exists('Decka_Profile')&&Decka_Profile::required($uid))throw new RuntimeException('Uzupełnij dane kibica przed zakupem.');
         $key=sanitize_text_field($input['request_key']??'');
         if(!preg_match('/^[a-zA-Z0-9-]{16,64}$/',$key))throw new RuntimeException('Niepoprawny identyfikator zamówienia.');
-        $buyer=[];if($uid&&!$voucher&&class_exists('Decka_Profile')){$profile=Decka_Profile::read($uid);foreach(['first_name','last_name','phone'] as $field)$buyer[$field]=$profile[$field];}
+        $buyer=[];if($uid&&!$voucher&&class_exists('Decka_Profile')){$profile=Decka_Profile::validate(Decka_Profile::read($uid));foreach(Decka_Profile::FIELDS as $field)$buyer[$field]=$profile[$field];}
         if(!$uid){
             $key=hash_hmac('sha256',$key,$guestHash);
             foreach(['first_name','last_name'] as $field){$value=trim(sanitize_text_field($input[$field]??''));if($value===''||mb_strlen($value)>100)throw new RuntimeException('Podaj poprawne imię i nazwisko.');$buyer[$field]=$value;}
@@ -43,7 +43,7 @@ $id=Decka_DB::hall_tx(function()use($wpdb,$mode,$uid,$key,$chosen,$email,$vouche
             $interval=max(0,(int)($settings['purchase_interval']??0));
             if(!$voucher&&$interval)foreach($events as $eid){$last=$wpdb->get_var($wpdb->prepare('SELECT MAX(o.created_at) FROM '.Decka_DB::table('orders').' o JOIN '.Decka_DB::table('items').' i ON i.order_id=o.id WHERE o.email=%s AND o.mode=%s AND i.event_id=%d AND o.created_at>%s',$email,$mode,$eid,gmdate('Y-m-d H:i:s',time()-$interval*60)));if($last)throw new RuntimeException('Kolejny zakup na ten mecz jest możliwy po '.wp_date('H:i',strtotime($last.' UTC')+$interval*60,new DateTimeZone('Europe/Warsaw')).' (odstęp '.$interval.' min).');}
             $raw=[];$total=0;
-            foreach($chosen as $seat=>$kind){$price=$voucher?0:(int)($offer?($kind==='normal'?$offer->normal_price:$offer->reduced_price):($event_rows[$event_id]->{$kind.'_price'}??$settings[$kind]??($kind==='normal'?2500:1500)));if($price<0)throw new RuntimeException('Nieprawidłowa cena.');$total+=$price;$amounts=Decka_Domain::allocate($price,count($events));foreach($events as $i=>$eid)$raw[]=['event_id'=>$eid,'seat_id'=>(string)$seat,'kind'=>$voucher?'voucher':$kind,'amount'=>$amounts[$i]];}
+            foreach($chosen as $seat=>$kind){$price=$voucher?0:(int)($offer?($kind==='normal'?$offer->normal_price:$offer->reduced_price):($event_rows[$event_id]->{$kind.'_price'}??$settings[$kind]??($kind==='normal'?2500:1500)));if($price<0)throw new RuntimeException('Nieprawidłowa cena.');$total+=$price;$amounts=Decka_Domain::allocate($price,count($events));$ticketNonce=bin2hex(random_bytes(24));foreach($events as $i=>$eid)$raw[]=['event_id'=>$eid,'seat_id'=>(string)$seat,'kind'=>$voucher?'voucher':$kind,'amount'=>$amounts[$i],'ticket_nonce'=>$ticketNonce];}
             $promo=null;$code=strtoupper(sanitize_text_field($input['promo']??''));$before=$total;
             if($code && !$voucher){
                 $promo=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('promos').' WHERE code=%s FOR UPDATE',$code));
@@ -84,7 +84,7 @@ $id=Decka_DB::hall_tx(function()use($wpdb,$mode,$uid,$key,$chosen,$email,$vouche
     }
     private static function issue_locked(int $id,string $status):void {
         global $wpdb;$o=self::order($id);$items=$wpdb->get_results($wpdb->prepare('SELECT * FROM '.Decka_DB::table('items').' WHERE order_id=%d',$id));
-        foreach($items as $i)Decka_DB::insert('tickets',['order_id'=>$id,'event_id'=>$i->event_id,'seat_id'=>$i->seat_id,'kind'=>$i->kind,'nonce'=>bin2hex(random_bytes(24)),'status'=>'valid']);
+        foreach($items as $i)Decka_DB::insert('tickets',['order_id'=>$id,'event_id'=>$i->event_id,'seat_id'=>$i->seat_id,'kind'=>$i->kind,'nonce'=>$i->ticket_nonce?:bin2hex(random_bytes(24)),'status'=>'valid']);
         Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('orders').' SET status=%s,paid_at=%s WHERE id=%d',$status,gmdate('Y-m-d H:i:s'),$id));
         Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('inventory').' SET state=%s WHERE order_id=%d',$status==='paid'?'paid':($status==='voucher'?'voucher':'free'),$id));
     }

@@ -9,5 +9,8 @@ final class Decka_Profile {
     }
     public static function read(int $uid):array {$p=[];foreach(self::FIELDS as $f)$p[$f]=(string)get_user_meta($uid,'decka_'.$f,true);return $p;}
     public static function save(int $uid,array $input):void {$p=self::validate($input);foreach($p as $k=>$v)update_user_meta($uid,'decka_'.$k,$v);wp_update_user(['ID'=>$uid,'first_name'=>$p['first_name'],'last_name'=>$p['last_name'],'display_name'=>$p['first_name'].' '.$p['last_name']]);delete_user_meta($uid,'decka_profile_required');}
-    public static function required(int $uid):bool {return (bool)get_user_meta($uid,'decka_profile_required',true);}
+    public static function required(int $uid):bool {
+        if((bool)get_user_meta($uid,'decka_profile_required',true))return true;
+        try{self::validate(self::read($uid));return false;}catch(Throwable){return true;}
+    }
 }

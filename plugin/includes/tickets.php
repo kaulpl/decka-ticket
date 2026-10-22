@@ -1,7 +1,8 @@
 <?php
 final class Decka_Scan_Error extends RuntimeException {public function __construct(public string $status,string $message){parent::__construct($message);}}
 final class Decka_Tickets {
-    public static function number(int $id):string {global $wpdb;$nonce=$wpdb->get_var($wpdb->prepare('SELECT nonce FROM '.Decka_DB::table('tickets').' WHERE id=%d',$id));return 'DK-'.strtoupper(substr(hash('sha256',(string)$nonce),0,16));}
+    public static function number_from_nonce(string $nonce):string {return 'DK-'.strtoupper(substr(hash('sha256',$nonce),0,16));}
+    public static function number(int $id):string {global $wpdb;$nonce=$wpdb->get_var($wpdb->prepare('SELECT nonce FROM '.Decka_DB::table('tickets').' WHERE id=%d',$id));return self::number_from_nonce((string)$nonce);}
     public static function documents(int $order_id):array {
         global $wpdb;$o=Decka_Service::order($order_id);if(!$o||!in_array($o->status,['paid','free','voucher'],true))throw new RuntimeException('Bilety nie są dostępne.');
         $rows=$wpdb->get_results($wpdb->prepare('SELECT t.*,e.opponent,e.starts_at,e.venue,e.image_id,i.amount FROM '.Decka_DB::table('tickets').' t JOIN '.Decka_DB::table('events').' e ON e.id=t.event_id JOIN '.Decka_DB::table('items').' i ON i.order_id=t.order_id AND i.event_id=t.event_id AND i.seat_id=t.seat_id WHERE t.order_id=%d ORDER BY t.id',$order_id));$groups=[];
