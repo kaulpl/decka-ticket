@@ -47,7 +47,7 @@ final class Decka_DB {
     }
 
     public static function table(string $name): string {global $wpdb;return $wpdb->prefix.'dect_'.$name;}
-    public static function default_settings():array {return ['mode'=>'test','normal'=>2500,'reduced'=>1500,'league_url'=>'https://rozgrywki.pzkosz.pl/liga/1/druzyny/d/7625/decka-pelplin/terminarz.html','team_id'=>'7625','registration'=>1,'max_per_fan'=>10,'purchase_interval'=>0,'payment_provider'=>'stripe','apple_wallet_enabled'=>0,'google_wallet_enabled'=>0];}
+    public static function default_settings():array {return ['mode'=>'test','normal'=>2500,'reduced'=>1500,'league_url'=>'https://rozgrywki.pzkosz.pl/liga/1/druzyny/d/7625/decka-pelplin/terminarz.html','team_id'=>'7625','registration'=>1,'max_per_fan'=>10,'purchase_interval'=>0,'payment_provider'=>'stripe','terms_html'=>'','apple_wallet_enabled'=>0,'google_wallet_enabled'=>0];}
     public static function query(string $sql,string $table='query'): int {global $wpdb;self::require_storage();$r=$wpdb->query($sql);if($r===false)self::fail('query',$table);return (int)$r;}
     public static function insert(string $table,array $data): int {global $wpdb;self::require_storage();if(false===$wpdb->insert(self::table($table),$data))self::fail('insert',$table);return (int)$wpdb->insert_id;}
     public static function update(string $table,array $data,array $where):int {

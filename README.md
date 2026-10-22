@@ -1,3 +1,10 @@
+## Wydanie 1.4.0
+
+- przewijane podsumowanie przy większej liczbie biletów w kasjerze,
+- bardziej jaskrawe i jednoznaczne statusy w skanerze,
+- regulamin sprzedaży wyświetlany na dole strony i edytor treści w panelu administracyjnym,
+- poprawiona walidacja oficjalnych adresów przekierowania do płatności PayU.
+
 ## Wydanie 1.1.1
 
 Wersja 1.0 dodaje pełnoekranowy moduł kasjera pod `/kasjer`, sprzedaż biletów normalnych, ulgowych i darmowych z natychmiastową blokadą miejsca oraz bezpieczną wymianę miejsc z unieważnieniem starego kodu QR. Panel administracyjny otrzymał oddzielne dostępy bileterów i kasjerów, dziennik zdarzeń, pełne archiwum danych, raporty PDF oraz dwuetapowy reset systemu. Plan hali rozróżnia sprzedaż internetową i kasową, a generator biletu kończy dokument na paskach sponsorów.

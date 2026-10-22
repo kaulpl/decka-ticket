@@ -20,7 +20,12 @@ final class Decka_Payu {
     }
     public static function create(object $o):array {
         $payload=json_decode($o->stripe_payload,true);$payload['request']['validityTime']=(string)max(1,min(600,strtotime($o->created_at.' UTC')+600-time()));$d=self::request($o->mode,'POST','orders',$payload['request']);$id=(string)($d['orderId']??'');$url=(string)($d['redirectUri']??'');
-        if(!$id||!preg_match('/^[A-Za-z0-9_-]{1,150}$/',$id)||wp_parse_url($url,PHP_URL_SCHEME)!=='https'||wp_parse_url($url,PHP_URL_HOST)!==wp_parse_url(self::host($o->mode),PHP_URL_HOST))throw new RuntimeException('PayU nie zwróciło poprawnego odnośnika do płatności.');
+        $host=strtolower(rtrim((string)wp_parse_url($url,PHP_URL_HOST),'.'));
+        // PayU may return a hosted checkout on another official subdomain than
+        // the REST API host. Keep the redirect restricted to PayU-owned HTTPS
+        // domains instead of requiring an exact host match.
+        $payuHost=$host==='payu.com'||str_ends_with($host,'.payu.com');
+        if(!$id||!preg_match('/^[A-Za-z0-9_-]{1,150}$/',$id)||wp_parse_url($url,PHP_URL_SCHEME)!=='https'||!$payuHost)throw new RuntimeException('PayU nie zwróciło poprawnego odnośnika do płatności.');
         return ['id'=>'payu_'.$id,'url'=>$url,'metadata'=>['decka_order'=>(string)$o->id]];
     }
     public static function normalize(object $o,array $payment):array {
