@@ -8,6 +8,7 @@ foreach([1=>'Miasto Szkła Krosno',2=>'Weegree AZS Politechnika Opolska',3=>'KSK
 $settings['main_sponsor_image_id']=998;$settings['sponsor_image_id']=999;$o=Decka_Service::order($voucher['order_id']);
 $html=Decka_Tickets::email_html($o->id);file_put_contents(__DIR__.'/artifacts/ticket-email.html',$html);
 check(str_contains($html,'Pobierz bilety PDF')&&str_contains($html,'mail_signature='),'mail contains durable download button');
+check(str_contains($html,'assets/logo.png')&&str_starts_with(Decka_Tickets::filename($o->id),'BILET-DK-'),'mail header has club logo and attachment uses ticket number');
 $other=clone $o;$other->id++;check(Decka_Tickets::email_signature($o)!==Decka_Tickets::email_signature($other),'email signature bound to order');
 Decka_DB::update('orders',['first_name'=>'<script>test</script>'],['id'=>$o->id]);check(!str_contains(Decka_Tickets::email_html($o->id),'<script>'),'HTML escapes customer input');
 file_put_contents(__DIR__.'/artifacts/sponsor-voucher.pdf',Decka_Tickets::pdf($o->id));

@@ -88,6 +88,10 @@ rejects(fn()=>Decka_Service::quote(['event_id'=>1,'promo'=>'SEKTORB','seats'=>[[
 rejects(fn()=>buy(205,1,['promo'=>'SEKTORB']),'kod sektorowy ponownie sprawdzany przy zakupie');
 Decka_DB::insert('promos',['id'=>4,'code'=>'STARYKOD','type'=>'percent','value'=>10,'max_uses'=>0,'event_ids'=>'[]','active'=>1]);
 check(Decka_Service::quote(['event_id'=>1,'promo'=>'STARYKOD','seats'=>[['id'=>'205','kind'=>'normal']]])['total']===2250,'dotychczasowy kod bez zakresu działa we wszystkich sektorach');
+Decka_DB::insert('promos',['id'=>5,'code'=>'CENA12','type'=>'ticket_price','value'=>1200,'max_uses'=>0,'event_ids'=>'[]','active'=>1]);
+check(Decka_Service::quote(['event_id'=>1,'promo'=>'CENA12','seats'=>[['id'=>'205','kind'=>'normal'],['id'=>'206','kind'=>'reduced']]])['total']===2400,'kod ustala cenę każdego wybranego biletu');
+Decka_DB::insert('promos',['id'=>6,'code'=>'NORMALNYULGOWY','type'=>'normal_reduced','value'=>0,'max_uses'=>0,'event_ids'=>'[]','active'=>1]);
+check(Decka_Service::quote(['event_id'=>1,'promo'=>'NORMALNYULGOWY','seats'=>[['id'=>'205','kind'=>'normal'],['id'=>'206','kind'=>'reduced']]])['total']===3000,'kod liczy normalny w cenie ulgowego i nie zmienia ulgowego');
 rejects(fn()=>buy(71,1,['promo'=>'DECKA10']),'limit kodu obejmuje oczekujące płatności');
 $voucher=Decka_Service::create(['request_key'=>bin2hex(random_bytes(16)),'event_id'=>1,'email'=>'voucher@example.test','seats'=>[['id'=>'72','kind'=>'normal']]],true);
 check($voucher['status']==='voucher'&&$voucher['total']===0,'voucher bez obciążenia Stripe');
