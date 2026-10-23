@@ -77,7 +77,7 @@ $id=Decka_DB::hall_tx(function()use($wpdb,$mode,$uid,$key,$chosen,$email,$vouche
             }
             if($total===0){self::issue_locked($oid,$voucher?'voucher':'free');if($voucher)Decka_DB::audit('voucher',$oid,$email);return $oid;}
             $base=home_url('/bilety/?');
-            $payload=['mode'=>'payment','locale'=>'pl','customer_email'=>$email,'client_reference_id'=>(string)$oid,'metadata'=>['decka_order'=>(string)$oid,'decka_mode'=>$mode], 'payment_intent_data'=>['metadata'=>['decka_order'=>(string)$oid]],'payment_method_types'=>['card','blik'],'success_url'=>$base.'order='.$oid,'cancel_url'=>$base.'order='.$oid.'&cancel=1','expires_at'=>time()+1860,'line_items'=>[['price_data'=>['currency'=>'pln','unit_amount'=>$total,'product_data'=>['name'=>'Decka Pelplin — '.($offer?$offer->name:'bilety').' ('.count($raw).' wejść)']],'quantity'=>1]]];
+            $payload=['mode'=>'payment','locale'=>'pl','customer_email'=>$email,'client_reference_id'=>(string)$oid,'metadata'=>['decka_order'=>(string)$oid,'decka_mode'=>$mode], 'payment_intent_data'=>['metadata'=>['decka_order'=>(string)$oid]],'payment_method_types'=>['card','blik'],'success_url'=>$base.'order='.$oid.'&success=1','cancel_url'=>$base.'order='.$oid.'&cancel=1','expires_at'=>time()+1860,'line_items'=>[['price_data'=>['currency'=>'pln','unit_amount'=>$total,'product_data'=>['name'=>'Decka Pelplin — '.($offer?$offer->name:'bilety').' ('.count($raw).' wejść)']],'quantity'=>1]]];
             if(($settings['payment_provider']??'stripe')==='payu')$payload=Decka_Payu::payload(self::order($oid),'Decka Pelplin — '.($offer?$offer->name:'bilety'));Decka_DB::update('orders',['stripe_payload'=>wp_json_encode($payload)],['id'=>$oid]);
             return $oid;
         });
