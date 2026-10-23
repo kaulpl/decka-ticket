@@ -6,6 +6,18 @@ final class Decka_Service {
         $selected=[];foreach($seatIds as $seatId)$selected[]=(string)($catalog[$seatId]['sector']??'');
         if(array_diff(array_unique($selected),$allowed))throw new RuntimeException('Kod nie obowiązuje w wybranym sektorze.');
     }
+    private static function promo_total(object $promo,int $before,array $chosen,array $events,?object $offer,array $settings):int {
+        if(in_array($promo->type,['percent','fixed'],true))return Decka_Domain::discount($before,$promo->type,(int)$promo->value);
+        if($promo->type==='ticket_price')return min($before,max(0,(int)$promo->value)*count($chosen));
+        if($promo->type==='normal_reduced'){
+            $saving=0;foreach($chosen as $kind)if($kind==='normal'){
+                if($offer)$saving+=max(0,(int)$offer->normal_price-(int)$offer->reduced_price);
+                else foreach($events as $event)$saving+=max(0,(int)($event->normal_price??$settings['normal']??2500)-(int)($event->reduced_price??$settings['reduced']??1500));
+            }
+            return max(0,$before-$saving);
+        }
+        throw new InvalidArgumentException('Niepoprawna promocja.');
+    }
     public static function provider(object $o):string {$provider=json_decode($o->stripe_payload??'',true)['provider']??'stripe';return in_array($provider,['stripe','payu','cashier'],true)?$provider:'stripe';}
     public static function number(object $o):string {return 'Z-'.strtoupper(substr(hash('sha256',$o->mode.'|'.$o->id.'|'.$o->request_key),0,16));}
     public static function order(int $id):?object{global $wpdb;return $wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('orders').' WHERE id=%d',$id));}
@@ -51,7 +63,7 @@ $id=Decka_DB::hall_tx(function()use($wpdb,$mode,$uid,$key,$chosen,$email,$vouche
                 $permitted=array_map('intval',(array)get_option('decka_offer_promos_'.$offer_id,[]));if($offer&&!in_array((int)$promo->id,$permitted,true))throw new RuntimeException('Ten kod nie jest dostępny dla wybranego mini-karnetu.');$allowed=json_decode($promo->event_ids,true)?:[];if($allowed && array_diff($events,array_map('intval',$allowed)))throw new RuntimeException('Kod nie obejmuje wszystkich wybranych meczów.');self::validate_promo_sectors($promo,array_keys($chosen),$catalog);
                 $used=(int)$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM '.Decka_DB::table('orders')." WHERE mode=%s AND promo_id=%d AND status IN ('creating','pending','paid','free')",$mode,$promo->id));
                 if($promo->max_uses && $used>=$promo->max_uses)throw new RuntimeException('Limit wykorzystania kodu został osiągnięty.');
-                $total=Decka_Domain::discount($total,$promo->type,(int)$promo->value);
+                $total=self::promo_total($promo,$total,$chosen,array_values($event_rows),$offer,$settings);
                 $remaining=$total;foreach($raw as $i=>&$item){$item['amount']=$i===count($raw)-1?$remaining:(int)floor($before?$item['amount']*$total/$before:0);$remaining-=$item['amount'];}unset($item);
             }
             if(!$voucher && $total>0 && $total<200)throw new RuntimeException('Po rabacie zamówienie musi wynosić co najmniej 2 zł albo 0 zł.');
@@ -113,12 +125,12 @@ $id=Decka_DB::hall_tx(function()use($wpdb,$mode,$uid,$key,$chosen,$email,$vouche
         $ids=$offer?array_map('intval',json_decode($offer->event_ids,true)):[$event_id];$events=[];
         foreach($ids as $id){$e=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('events').' WHERE id=%d',$id));if(!$e||$e->cancelled||($e->starts_at&&$e->starts_at<=$now)||(!$offer&&!$e->sale_open))throw new RuntimeException('Sprzedaż jest zamknięta.');$events[]=$e;}
         $seats=(array)($input['seats']??[]);if(!$seats||count($seats)>10)throw new RuntimeException('Wybierz od 1 do 10 miejsc.');$known=array_column(Decka_DB::seats()['seats'],null,'id');$seen=[];$before=0;$regular=0;
-        foreach($seats as $seat){$kind=$seat['kind']??'normal';$id=$seat['id']??'';if(!isset($known[$id])||isset($seen[$id])||!in_array($kind,['normal','reduced'],true))throw new RuntimeException('Niepoprawne miejsce.');$seen[$id]=true;$sum=0;foreach($events as $e)$sum+=(int)($e->{$kind.'_price'}??$settings[$kind]??($kind==='normal'?2500:1500));$regular+=$sum;$before+=$offer?(int)$offer->{$kind.'_price'}:$sum;}
+        foreach($seats as $seat){$kind=$seat['kind']??'normal';$id=$seat['id']??'';if(!isset($known[$id])||isset($seen[$id])||!in_array($kind,['normal','reduced'],true))throw new RuntimeException('Niepoprawne miejsce.');$seen[$id]=$kind;$sum=0;foreach($events as $e)$sum+=(int)($e->{$kind.'_price'}??$settings[$kind]??($kind==='normal'?2500:1500));$regular+=$sum;$before+=$offer?(int)$offer->{$kind.'_price'}:$sum;}
         $total=$before;$code=strtoupper(sanitize_text_field($input['promo']??''));
         if($code){$promo=$wpdb->get_row($wpdb->prepare('SELECT * FROM '.Decka_DB::table('promos').' WHERE code=%s',$code));if(!$promo||!$promo->active||($promo->starts_at&&$promo->starts_at>$now)||($promo->ends_at&&$promo->ends_at<$now))throw new RuntimeException('Kod jest nieaktywny lub nieprawidłowy.');
             if($offer&&!in_array((int)$promo->id,array_map('intval',(array)get_option('decka_offer_promos_'.$offer_id,[])),true))throw new RuntimeException('Ten kod nie jest dostępny dla wybranego mini-karnetu.');
             $allowed=json_decode($promo->event_ids,true)?:[];if($allowed&&array_diff($ids,array_map('intval',$allowed)))throw new RuntimeException('Kod nie obejmuje wszystkich wybranych meczów.');self::validate_promo_sectors($promo,array_keys($seen),$known);
-            $used=(int)$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM '.Decka_DB::table('orders')." WHERE mode=%s AND promo_id=%d AND status IN ('creating','pending','paid','free')",Decka_DB::mode(),$promo->id));if($promo->max_uses&&$used>=$promo->max_uses)throw new RuntimeException('Limit wykorzystania kodu został osiągnięty.');$total=Decka_Domain::discount($before,$promo->type,(int)$promo->value);
+            $used=(int)$wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM '.Decka_DB::table('orders')." WHERE mode=%s AND promo_id=%d AND status IN ('creating','pending','paid','free')",Decka_DB::mode(),$promo->id));if($promo->max_uses&&$used>=$promo->max_uses)throw new RuntimeException('Limit wykorzystania kodu został osiągnięty.');$total=self::promo_total($promo,$before,$seen,$events,$offer,$settings);
         }
         if($total>0&&$total<200)throw new RuntimeException('Po rabacie minimum wynosi 2 zł albo 0 zł.');
         return ['before'=>$before,'regular'=>$regular,'total'=>$total,'discount'=>$before-$total,'percent'=>$before?round(($before-$total)*100/$before,1):0];
