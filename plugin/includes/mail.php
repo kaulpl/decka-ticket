@@ -28,7 +28,7 @@ final class Decka_Mail {
     }
     public static function send(string $to,string $subject,string $html,array $headers,array $attachments):bool {
         if(empty(Decka_DB::settings()['smtp_enabled']))return wp_mail($to,$subject,$html,$headers,$attachments);
-        $mail=null;try{$mail=self::client();$mail->addAddress($to);$mail->Subject=$subject;$mail->isHTML(true);$mail->Body=$html;$mail->AltBody=html_entity_decode(strip_tags(str_replace(['</p>','<br>','</tr>'],"\n",$html)),ENT_QUOTES,'UTF-8');foreach($attachments as $file)$mail->addAttachment($file,'Decka-bilety.pdf');return $mail->send();}
+        $mail=null;try{$mail=self::client();$mail->addAddress($to);$mail->Subject=$subject;$mail->isHTML(true);$mail->Body=$html;$mail->AltBody=html_entity_decode(strip_tags(str_replace(['</p>','<br>','</tr>'],"\n",$html)),ENT_QUOTES,'UTF-8');foreach($attachments as $file)$mail->addAttachment($file,basename($file));return $mail->send();}
         catch(Throwable $e){throw new RuntimeException('Nie udało się wysłać biletów przez SMTP. Sprawdź połączenie w Ustawienia → Bilety i e-mail.');}
         finally{if($mail)$mail->smtpClose();}
     }

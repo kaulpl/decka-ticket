@@ -89,7 +89,7 @@ final class Decka_API {
         Decka_Guest::init();$view=sanitize_key($_GET['view']??'shop');if($view==='admin'&&!current_user_can('decka_manage'))wp_die('Brak dostępu.',403);
         $file=DECKA_DIR.($view==='admin'?'assets/admin/index.html':'assets/index.html');if(!file_exists($file))wp_die('Brak zbudowanego interfejsu. Zainstaluj pełną paczkę ZIP.');
         status_header(200);nocache_headers();header('Content-Type: text/html; charset=UTF-8');header('X-Frame-Options: SAMEORIGIN');header('Referrer-Policy: same-origin');
-        $config=self::config();$config['view']=sanitize_key($_GET['view']??'shop');$config['order']=absint($_GET['order']??0);$config['adminScreen']=sanitize_key($_GET['screen']??'overview');
+        $config=self::config();$config['view']=sanitize_key($_GET['view']??'shop');$config['order']=absint($_GET['order']??0);$config['paymentReturn']=!empty($_GET['success']);$config['adminScreen']=sanitize_key($_GET['screen']??'overview');
         $html=file_get_contents($file);
         // Use explicit asset URLs in embedded documents, independently of the host page path.
         $html=str_replace(['src="./_next/','href="./_next/'],['src="'.esc_url(DECKA_URL.'assets/_next/'),'href="'.esc_url(DECKA_URL.'assets/_next/')],$html);$inject='<base href="'.esc_url(DECKA_URL.'assets/').'" /><script>window.DECKA='.wp_json_encode($config,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).';</script>';
