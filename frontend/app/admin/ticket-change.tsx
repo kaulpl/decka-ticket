@@ -4,7 +4,8 @@ import {X} from 'lucide-react';
 type Row=Record<string,any>;
 export default function TicketChange({mode,order,eventId,games,catalog,api,onClose,onDone}:{mode:'seat'|'event';order:Row;eventId:number;games:Row[];catalog:Row;api:(path:string,body?:Row)=>Promise<any>;onClose:()=>void;onDone:(message:string,order:Row)=>void}){
  const source=order.items.filter((i:Row)=>Number(i.event_id)===eventId),old=source.map((i:Row)=>String(i.seat_id));
- const [target,setTarget]=useState(mode==='seat'?eventId:0),[inventory,setInventory]=useState<Row[]>([]),[selected,setSelected]=useState<string[]>([]),[sector,setSector]=useState(''),[preview,setPreview]=useState<Row|null>(null),[manual,setManual]=useState(mode==='seat'),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const initialSector=mode==='seat'?String(source[0]?.seat?.sector||''):'';
+ const [target,setTarget]=useState(mode==='seat'?eventId:0),[inventory,setInventory]=useState<Row[]>([]),[selected,setSelected]=useState<string[]>([]),[sector,setSector]=useState(initialSector),[preview,setPreview]=useState<Row|null>(null),[manual,setManual]=useState(mode==='seat'),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const seats:Row[]=catalog?.seats||[],sectors=useMemo(()=>[...new Set(seats.map(s=>s.sector))] as string[],[seats]);
  useEffect(()=>{if(!target)return;setBusy(true);setError('');Promise.all([api('inventory?event='+target),mode==='event'?api('ticket-change/preview',{order_id:order.id,source_event_id:eventId,target_event_id:target}):Promise.resolve(null)]).then(([inv,p])=>{setInventory(inv.rows||[]);setPreview(p);setSelected(mode==='event'?(p?.suggested_seats||[]):[]);setManual(mode==='seat'||!p?.suggested_seats?.length)}).catch(e=>setError(e.message)).finally(()=>setBusy(false));},[target]);
  const blocked=new Set(inventory.filter(i=>Number(i.order_id)!==Number(order.id)).map(i=>String(i.seat_id))),shown=seats.filter(s=>!sector||s.sector===sector);
