@@ -27,6 +27,7 @@ jobs:
           php-version: '8.2'
           extensions: pdo_sqlite, mbstring, gd, zip, openssl
       - run: python3 tests/release-version.py
+      - run: python3 tests/ui-contracts.py
       - name: Assign release version
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: python3 scripts/release-version.py
