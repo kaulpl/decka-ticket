@@ -107,7 +107,8 @@ $id=Decka_DB::hall_tx(function()use($wpdb,$mode,$uid,$key,$chosen,$email,$vouche
             if(!$o || self::provider($o)!==$provider || $o->mode!==$mode || (bool)($s['livemode']??false)!==($mode==='live') || ($o->session_id && $o->session_id!==$s['id']) || (string)($s['client_reference_id']??'')!==(string)$id || (int)($s['amount_total']??-1)!==(int)$o->total || ($s['currency']??'')!=='pln')throw new RuntimeException('Płatność nie pasuje do zamówienia.');
             if(!in_array($o->status,['creating','pending'],true))return;
             if(($s['payment_status']??'')==='paid'){
-                Decka_DB::update('orders',['session_id'=>$s['id'],'payment_id'=>$s['payment_intent']??null],['id'=>$id]);
+                $payload=json_decode((string)$o->stripe_payload,true)?:[];if(!empty($s['payment_method']))$payload['payment_method']=sanitize_text_field((string)$s['payment_method']);
+                Decka_DB::update('orders',['session_id'=>$s['id'],'payment_id'=>$s['payment_intent']??null,'stripe_payload'=>wp_json_encode($payload)],['id'=>$id]);
                 self::issue_locked($id,'paid');
             }elseif(($s['status']??'')==='expired'){
                 Decka_DB::query($wpdb->prepare('UPDATE '.Decka_DB::table('orders')." SET status='expired' WHERE id=%d",$id));
