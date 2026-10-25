@@ -53,7 +53,7 @@ final class Decka_Tickets {
     }
     /** Durable bearer link for email. Bound to this order's private random key. */
     public static function email_signature(object $o):string {return hash_hmac('sha256','email-pdf|'.$o->id.'|'.$o->request_key.'|'.$o->email,wp_salt('secure_auth'));}
-    public static function email_link(object $o):string {return add_query_arg(['action'=>'decka_pdf','order'=>$o->id,'mail_signature'=>self::email_signature($o)],admin_url('admin-post.php'));}
+    public static function email_link(object $o):string {return add_query_arg(['order'=>$o->id,'mail_signature'=>self::email_signature($o)],home_url('/bilety/pobierz/'));}
     public static function email_html(int $id,string $context=''):string {
         $o=Decka_Service::order($id);$docs=self::documents($id);$esc=fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');$number=$esc(Decka_Service::number($o));$link=$esc(self::email_link($o));$name=$esc($o->first_name?:'Kibicu');$rows='';$seats=array_column(Decka_DB::seats()['seats'],null,'id');
         foreach($docs as $doc){$t=$doc['ticket'];$seat=$seats[$t->seat_id];$rows.='<tr><td style="padding:20px 0;border-top:1px solid #dde5ef"><strong style="font-size:18px;color:#153b68">'.($doc['package']?'Mini-karnet':'Bilet na mecz').'</strong><p style="margin:8px 0">Sektor '.$esc($seat['sector']).' · Rząd '.$esc($seat['row']).' · Miejsce '.$esc($seat['number']).'</p>';foreach($doc['events'] as $event){$when=$event->starts_at?wp_date('d.m.Y · H:i',strtotime($event->starts_at.' UTC'),new DateTimeZone('Europe/Warsaw')):'Termin do potwierdzenia';$rows.='<p style="margin:8px 0"><b>Decka Pelplin — '.$esc($event->opponent).'</b><br>'.$esc($when).'<br><span style="color:#64748b">'.$esc($event->venue).'</span></p>';}$rows.='</td></tr>';}
@@ -62,7 +62,7 @@ final class Decka_Tickets {
     }
     public static function download_link(int $id):string {
         $until=time()+900;$signature=hash_hmac('sha256','pdf|'.$id.'|'.$until,wp_salt('secure_auth'));
-        return add_query_arg(['action'=>'decka_pdf','order'=>$id,'until'=>$until,'signature'=>$signature],admin_url('admin-post.php'));
+        return add_query_arg(['order'=>$id,'until'=>$until,'signature'=>$signature],home_url('/bilety/pobierz/'));
     }
     public static function download_signature(int $id,int $until,string $signature):bool {
         return $until>=time()&&$until<=time()+900&&hash_equals(hash_hmac('sha256','pdf|'.$id.'|'.$until,wp_salt('secure_auth')),$signature);
