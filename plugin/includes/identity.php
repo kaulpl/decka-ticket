@@ -7,6 +7,13 @@ final class Decka_Identity {
     }
     public static function callback_url():string {return home_url('/konto/google/powrot/');}
     public static function authoritative(array $claims):bool {return ($claims['email_verified']??false)===true&&(str_ends_with(strtolower($claims['email']??''),'@gmail.com')||!empty($claims['hd']));}
+    public static function connection(int $uid):array {
+        if(!$uid)return ['connected'=>false,'email'=>''];
+        $email=(string)get_user_meta($uid,'decka_google_email',true);
+        $connected=(bool)get_user_meta($uid,'decka_google_connected_at',true);
+        if(!$connected){global $wpdb;$connected=(bool)$wpdb->get_var($wpdb->prepare("SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE %s AND option_value=%s LIMIT 1",$wpdb->esc_like('decka_google_user_').'%',(string)$uid));}
+        return ['connected'=>$connected,'email'=>$email];
+    }
     public static function secret(string $name):string {return Decka_Stripe::decrypt((string)(Decka_DB::settings()[$name]??''));}
     private static function cookie(string $value,int $expiry):void {setcookie('decka_google_state',$value,['expires'=>$expiry,'path'=>'/','secure'=>is_ssl(),'httponly'=>true,'samesite'=>'Lax']);}
     public static function start():void {
@@ -50,7 +57,8 @@ final class Decka_Identity {
             if(is_wp_error($uid))throw new RuntimeException('Nie można utworzyć konta. Spróbuj ponownie.');
         }
         if(!get_user_by('id',$uid))throw new RuntimeException('Konto nie istnieje.');
-        if(!$linked&&!add_option($map,$uid,'','no')&&(int)get_option($map)!==$uid)throw new RuntimeException('Nie można połączyć konta Google.');return $uid;
+        if(!$linked&&!add_option($map,$uid,'','no')&&(int)get_option($map)!==$uid)throw new RuntimeException('Nie można połączyć konta Google.');
+        update_user_meta($uid,'decka_google_email',$email);update_user_meta($uid,'decka_google_connected_at',gmdate('c'));return $uid;
     }
     private static function login(int $uid):void {wp_set_current_user($uid);wp_set_auth_cookie($uid,true,is_ssl());Decka_DB::audit('google_login',$uid);wp_safe_redirect(home_url('/bilety/'));exit;}
     private static function challenge(array $claims,int $uid):void {
