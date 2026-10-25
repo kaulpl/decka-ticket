@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Decka Bilety
  * Description: Numerowane miejsca, Stripe, bilety PDF i kontrola wejścia Decki Pelplin.
- * Version: 1.8.0
+ * Version: 1.8.1
  * Update URI: https://github.com/kaulpl/decka-ticket
  * Requires at least: 6.6
  * Requires PHP: 8.2
@@ -11,7 +11,7 @@
 defined('ABSPATH') || exit;
 define('DECKA_DIR', plugin_dir_path(__FILE__));
 define('DECKA_URL', plugin_dir_url(__FILE__));
-define('DECKA_VERSION', '1.8.0');
+define('DECKA_VERSION', '1.8.1');
 define('DECKA_FILE', __FILE__);
 foreach (['domain','db','stripe','mail','profile','service','cashier','guest','tickets','payu','league','api','identity','wallet','updater','admin-api','xlsx','admin'] as $part) require_once DECKA_DIR."includes/$part.php";
 Decka_Updater::init();
@@ -37,6 +37,7 @@ add_action('admin_post_decka_report_pdf',['Decka_Admin','report_pdf']);
 add_action('init',[Decka_DB::class,'maybe_upgrade']);
 add_action('template_redirect',function(){
     $path=untrailingslashit(wp_parse_url($_SERVER['REQUEST_URI']??'',PHP_URL_PATH));
+    if($path===untrailingslashit(wp_parse_url(home_url('/bilety/pobierz/'),PHP_URL_PATH)))Decka_Tickets::download();
     foreach(['/bilety'=>'shop','/skaner'=>'gate','/kasjer'=>'cashier'] as $slug=>$view)if($path===untrailingslashit(wp_parse_url(home_url($slug),PHP_URL_PATH))){$_GET['view']=$view;Decka_API::app();}
     foreach(['/kup-bilet','/kup-bilety','/bileter'] as $old)if($path===untrailingslashit(wp_parse_url(home_url($old),PHP_URL_PATH))){wp_safe_redirect(home_url($old==='/bileter'?'/skaner/':'/bilety/'),301);exit;}
 },0);
