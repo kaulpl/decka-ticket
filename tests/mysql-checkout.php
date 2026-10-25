@@ -227,7 +227,7 @@ $profile=['first_name'=>'Jan','last_name'=>'Kowalski','street'=>'Sambora','house
 $bad=$profile;$bad['city']='';$failed=false;try{Decka_Profile::validate($bad);}catch(RuntimeException $e){$failed=true;}decka_check($failed,'incomplete profile rejected before account creation');
 $settings=Decka_DB::settings();$settings['registration']=1;update_option('decka_settings',$settings);
 $google=['sub'=>'ci-google-new','email'=>'new-google@gmail.com','email_verified'=>true,'name'=>'Jan Kowalski','given_name'=>'Jan','family_name'=>'Kowalski'];
-$newUid=Decka_Identity::resolve($google);decka_check(Decka_Profile::required($newUid),'new Google account requires contact form');
+$newUid=Decka_Identity::resolve($google);$googleConnection=Decka_Identity::connection($newUid);decka_check($googleConnection['connected']&&$googleConnection['email']==='new-google@gmail.com','Google connection status is available to the customer account');decka_check(Decka_Profile::required($newUid),'new Google account requires contact form');
 Decka_Profile::save($newUid,$profile);decka_check(!Decka_Profile::required($newUid)&&Decka_Profile::read($newUid)['city']==='Pelplin','profile persists and completion flag clears');
 decka_check(Decka_Identity::resolve($google)===$newUid,'linked Google account signs into same user');
 $existing=wp_insert_user(['user_login'=>'ci_google_existing','user_email'=>'existing-ci@gmail.com','user_pass'=>wp_generate_password(),'role'=>'subscriber']);
